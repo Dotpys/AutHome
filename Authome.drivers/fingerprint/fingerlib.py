@@ -85,15 +85,21 @@ class FingerprintSensor:
 
     #Instruction 0x04
     def search(self, buffer_id: int, start_page: int, page_number: int) -> tuple[int, int]:
-        if(buffer_id != 0x01 or buffer_id != 0x02):
-            buffer_id = 0X01
-            print("IL buffer non era corretto, di default è 0x01")
-        instruction_packet = self.generate_packet(0x01, [OPCODE_SEARCH, buffer_id, start_page, page_number])
+        if(buffer_id != 0x01):
+            buffer_id = 0X02
+        content = [OPCODE_SEARCH, buffer_id]
+        content.append((start_page & 0xFF00) >> 8)
+        content.append((start_page & 0x00FF) >> 0)
+        content.append((page_number & 0xFF00) >> 8)
+        content.append((page_number & 0x00FF) >> 0)
+        instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
         self.channel.write(instruction_packet)
         response_packet = self.channel.read(16)
         response_ack = response_packet[9]
-        if(response_packet[9] == ACK_OK):
-            return (response_ack, from_bytes(response_packet[10:12]))
+        if(response_ack == ACK_OK):
+            return (response_ack, from_bytes(response_packet[10:2]))
+        else:
+            return (response_ack, [])
 
 
     #Instruction 0x0A
@@ -209,6 +215,7 @@ def from_bytes(data: bytearray) -> int:
 
 
 fs = FingerprintSensor("COM4", 57600)
+fs.search(4, 0x1234, 0x6543)
 print("Sensore di imprtonta inizializzato")
 result: int = 0
 print("Appoggia il dito")
