@@ -1,0 +1,37 @@
+*[b-lk68mfhes0]{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    list-style: none;
+    text-decoration: none;
+    font-family: 'Josefin Sans', sans-serif;
+}
+
+.wrapper[b-lk68mfhes0] {
+    
+    background: #404A80;
+}
+
+.container .card[b-lk68mfhes0] {
+    border-radius: 15px;
+    background: #404A80;
+    border: none;
+}
+
+.container .card:hover[b-lk68mfhes0] {
+    border: 2px white solid;
+}
+
+.container .card .card-header[b-lk68mfhes0] {
+    background: #404A80;
+    font-size: 23px;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+
+.container .card .card-body[b-lk68mfhes0] {
+    background: #404A80;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 100px;
+    font-size: 20px;
+}

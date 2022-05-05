@@ -1,0 +1,35 @@
+﻿@page "/users"
+@using Data
+
+<PageTitle>Users</PageTitle>
+
+<h1>Users</h1>
+
+@if (users != null) {
+    @if (users.Count() != 0) {
+        <div class="list-container">
+            @foreach (var user in users) {
+                <div class="card user-card">
+                    <div class="card-body">
+                        <h5 class="card-title">@user.FirstName @user.LastName</h5>
+                    </div>
+                </div>
+            }
+        </div>
+    } else {
+        <p>No user registered</p>
+    }
+} else {
+    <p>No data</p>
+}
+
+@code {
+    IEnumerable<User>? users;
+
+    protected override Task OnInitializedAsync()
+    {
+        using var ctx = new AutHomeContext();
+        users = ctx.Users.ToList();
+        return Task.CompletedTask;
+    }
+}

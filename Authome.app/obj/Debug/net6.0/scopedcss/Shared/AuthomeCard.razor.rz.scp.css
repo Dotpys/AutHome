@@ -1,0 +1,24 @@
+
+.card[b-hpgsxi9nqj] {
+    border-radius: 15px;
+    background: #404A80;
+    border: none;
+}
+
+.card:hover[b-hpgsxi9nqj] {
+    border: 2px white solid;
+}
+
+.card .card-header[b-hpgsxi9nqj] {
+    background: rgb(65, 85, 195);;
+    font-size: 23px;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+
+.card .card-body[b-hpgsxi9nqj] {
+    background: rgb(65, 85, 195);;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 100px;
+    font-size: 20px;
+}
