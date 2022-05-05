@@ -101,6 +101,13 @@ class FingerprintSensor:
         else:
             return (response_ack, [])
 
+    #Instruction 0x05
+    def regModel(self) -> int:
+        instruction_packet = self.generate_packet(PACKET_ID_COMMAND, [OPCODE_REGMODEL])
+        self.channel.write(instruction_packet)
+        response_packet = self.channel.read(12)
+        return response_packet[9]
+
 
     #Instruction 0x0A
     def upload_image(self) -> tuple[int, bytes]:
