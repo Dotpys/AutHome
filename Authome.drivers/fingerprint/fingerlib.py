@@ -101,10 +101,35 @@ class FingerprintSensor:
         else:
             return (response_ack, [])
 
+
     #Instruction 0x05
     def regModel(self) -> int:
         instruction_packet = self.generate_packet(PACKET_ID_COMMAND, [OPCODE_REGMODEL])
         self.channel.write(instruction_packet)
+        response_packet = self.channel.read(12)
+        return response_packet[9]
+
+
+    #Instruction 0x06
+    def store(self, bufferID: int, pageID) -> int:
+        if(buffer_id != 0x01):
+            buffer_id = 0X02
+        content = [OPCODE_STORE, bufferID]
+        content.append((pageID & 0xFF00) >> 8)
+        content.append((pageID & 0x00FF) >> 0)
+        instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
+        response_packet = self.channel.read(12)
+        return response_packet[9]
+
+
+    #Instruction 0x07
+    def loadChar(self, bufferID: int, pageID: int) -> int:
+        if(buffer_id != 0x01):
+            buffer_id = 0X02
+        content = [OPCODE_LOADCHAR, bufferID]
+        content.append((pageID & 0xFF00) >> 8)
+        content.append((pageID & 0x00FF) >> 0)
+        instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
         response_packet = self.channel.read(12)
         return response_packet[9]
 
