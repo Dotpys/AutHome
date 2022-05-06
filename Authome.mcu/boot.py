@@ -1,4 +1,5 @@
 #==========Imports==========
+import esp32
 import network
 import umqtt
 
@@ -6,12 +7,16 @@ import umqtt
 #Default AP information.
 WLAN_SSID = "GHST"
 WLAN_PSWD = "wafer4000"
+#MQTT Configuration
+MQTT_CLIENT_ID = "mqtt-esp32-a95045a6"
+MQTT_BROKER_HOSTNAME = "192.168.50.7"
+MQTT_BROKER_PORT = 1883
 
 #==========Globals==========
 #HAL objects.
 sta_if = network.WLAN(network.STA_IF)
 #MQTT objects
-mqtt_client = umqtt.MQTTClient("mqtt-explorer-a95044b7", "192.168.50.7", 1883, None, None, 5)
+mqtt_client = umqtt.MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER_HOSTNAME, MQTT_BROKER_PORT, None, None, 5)
 
 #==========Utils==========
 def count_set_bits(n):
@@ -59,12 +64,17 @@ def connect_to_broker():
 	log("INF", "MQTT", "Trying to connect to broker...")
 	mqtt_client.connect()
 	log("INF", "MQTT", "Connected to broker")
+	mqtt_client.set_last_will("microcontroller/status", "Offline")
+	mqtt_client.publish("microcontroller/status", "Online")
 
 #==========Main==========
 def main():
 	check_if()
 	connect_to_ap(WLAN_SSID, WLAN_PSWD)
 	connect_to_broker()
+	while (True):
+		mcu_temp = (esp32.raw_temperature() - 32) * 5 / 9
+		mqtt_client.publish("microcontroller/temperature", str(mcu_temp))
 
 if __name__ == "__main__":
 	main()
