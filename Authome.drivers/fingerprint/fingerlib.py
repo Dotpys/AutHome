@@ -118,6 +118,7 @@ class FingerprintSensor:
         content.append((pageID & 0xFF00) >> 8)
         content.append((pageID & 0x00FF) >> 0)
         instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
+        self.channel.write(instruction_packet)
         response_packet = self.channel.read(12)
         return response_packet[9]
 
@@ -130,8 +131,12 @@ class FingerprintSensor:
         content.append((pageID & 0xFF00) >> 8)
         content.append((pageID & 0x00FF) >> 0)
         instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
+        self.channel.write(instruction_packet)
         response_packet = self.channel.read(12)
         return response_packet[9]
+
+
+    #Instruction 0x08
 
 
     #Instruction 0x0A
