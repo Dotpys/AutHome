@@ -101,12 +101,85 @@ class FingerprintSensor:
         else:
             return (response_ack, [])
 
+
     #Instruction 0x05
     def regModel(self) -> int:
         instruction_packet = self.generate_packet(PACKET_ID_COMMAND, [OPCODE_REGMODEL])
         self.channel.write(instruction_packet)
         response_packet = self.channel.read(12)
         return response_packet[9]
+
+
+    #Instruction 0x06
+    def store(self, bufferID: int, pageID) -> int:
+        if(buffer_id != 0x01):
+            buffer_id = 0X02
+        content = [OPCODE_STORE, bufferID]
+        content.append((pageID & 0xFF00) >> 8)
+        content.append((pageID & 0x00FF) >> 0)
+        instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
+        self.channel.write(instruction_packet)
+        response_packet = self.channel.read(12)
+        return response_packet[9]
+
+
+    #Instruction 0x07
+    def loadChar(self, bufferID: int, pageID: int) -> int:
+        if(buffer_id != 0x01):
+            buffer_id = 0X02
+        content = [OPCODE_LOADCHAR, bufferID]
+        content.append((pageID & 0xFF00) >> 8)
+        content.append((pageID & 0x00FF) >> 0)
+        instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
+        self.channel.write(instruction_packet)
+        response_packet = self.channel.read(12)
+        return response_packet[9]
+
+
+      #Instruction 0x08
+    def upChar(self, bufferID: int) -> int:
+        if(buffer_id != 0x01):
+            buffer_id = 0X02
+        content = [OPCODE_UPCHAR, bufferID]
+        instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
+        self.channel.write(instruction_packet)
+        response_packet = self.receive_packet(12)
+        response_ack = response_packet[9]
+
+        if (response_ack == ACK_OK):
+            print("Sending characteristics to host...")
+            characteristics: bytes = []
+            end: bool = False
+            while (not end):
+                data_packet = self.receive_packet()
+
+                if(data_packet ["id"] == PACKET_ID_ENDDATA):
+                    end = True
+                characteristics += data_packet["data"]
+            return (response_ack, characteristics)
+        else:
+            return (response_ack, [])
+
+
+    #Instruction 0x09
+    def downChar(self, bufferID: int) -> tuple[int, int]:
+        content = [OPCODE_DOWNCHAR, bufferID]
+        instruction_packet = self.generate_packet(PACKET_ID_COMMAND, content)
+        self.channel.write(instruction_packet)
+        response_packet = self.channel.read(12)
+        response_ack = response_packet(9)
+
+        if(response_ack == ACK_OK):
+            characteristic: bytes = []
+            end: bool = False
+            while(not end):
+                data_packet = self.receive_packet()
+                if(data_packet["id"] == PACKET_ID_ENDDATA):
+                    end = True
+                characteristic += (data_packet["data"])
+            return (response_ack, characteristic)
+        else:
+            return (response_ack, [])
 
 
     #Instruction 0x0A
