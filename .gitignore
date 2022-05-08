@@ -1,4 +1,4 @@
-/.vscode
-/bin
-/obj
+.vscode
 *.conf
+Authome.app/bin/
+Authome.app/obj/
