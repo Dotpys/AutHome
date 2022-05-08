@@ -1,7 +1,4 @@
-import numpy as np
-import serial
-from PIL import Image
-import numpy as np
+from machine import UART
 
 ACK_OK: int = 0x00
 ACK_RECEPTION_ERROR: int = 0x01
