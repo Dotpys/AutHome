@@ -37,29 +37,36 @@
     font-size: 20px;
 }
 /* _content/AutHome/Shared/AuthomeCard.razor.rz.scp.css */
-
 .card[b-hpgsxi9nqj] {
     border-radius: 15px;
-    background: #404A80;
+    background: #232323;
+    transition: all 0.1s cubic-bezier(.25,.8,.25,1);
+    box-shadow: 0 0 2px rgba(0,0,0,0.125);
     border: none;
+    flex-grow: 1;
+    flex-shrink: 1;
+    color: white;
+    --accentColor: #4155c3;
 }
 
 .card:hover[b-hpgsxi9nqj] {
-    border: 2px white solid;
+    box-shadow: 0 0 20px var(--accentColor);
+    border: none;
 }
 
 .card .card-header[b-hpgsxi9nqj] {
-    background: rgb(65, 85, 195);;
+    box-shadow: 0 0 2px rgba(0,0,0,0.25);
+    border: none;
+    border-radius: 15px;
+    background: var(--accentColor);
     font-size: 23px;
-    border-top-left-radius: 15px;
-    border-top-right-radius: 15px;
 }
-
-.card .card-body[b-hpgsxi9nqj] {
-    background: rgb(65, 85, 195);;
-    border-bottom-left-radius: 15px;
-    border-bottom-right-radius: 100px;
-    font-size: 20px;
+/* _content/AutHome/Shared/MainLayout.razor.rz.scp.css */
+.customcontainer[b-o07k5sueyj] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	padding-top: 20px;
 }
 /* _content/AutHome/Shared/NavMenu.razor.rz.scp.css */
 .navbar[b-rt4y2pgv2l] {

@@ -13,4 +13,9 @@ public class ControlHub : Hub
 	{
 		await Clients.All.SendAsync("Humidity", humidity);
 	}
+
+	public async Task SendMicrocontrollerTemperature(int temperature)
+	{
+		await Clients.All.SendAsync("MicrocontrollerTemperature", temperature);
+	}
 }

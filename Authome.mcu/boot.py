@@ -1,6 +1,9 @@
 #==========Imports==========
+import dht
 import esp32
+import machine
 import network
+import time
 import umqtt
 
 #==========Costants==========
@@ -8,15 +11,29 @@ import umqtt
 WLAN_SSID = "GHST"
 WLAN_PSWD = "wafer4000"
 #MQTT Configuration
-MQTT_CLIENT_ID = "mqtt-esp32-a95045a6"
+MQTT_CLIENT_ID = "esp32-endpoint"
 MQTT_BROKER_HOSTNAME = "192.168.50.7"
 MQTT_BROKER_PORT = 1883
+#MQTT Topics
+TOPIC_BASE = "authome/"
+TOPIC_MCU = TOPIC_BASE + "mcu/"
+TOPIC_MCU_STATUS = TOPIC_MCU + "status"
+TOPIC_MCU_TEMPERATURE = TOPIC_MCU + "temperature"
+TOPIC_DHT = TOPIC_BASE + "dht/"
+TOPIC_DHT_TEMPERATURE = TOPIC_DHT + "temperature"
+TOPIC_DHT_HUMIDITY = TOPIC_DHT + "humidity"
+#DHT Pin number
+PIN_DHT = 33
+
 
 #==========Globals==========
-#HAL objects.
+#WLAN objects
 sta_if = network.WLAN(network.STA_IF)
 #MQTT objects
 mqtt_client = umqtt.MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER_HOSTNAME, MQTT_BROKER_PORT, None, None, 5)
+#DHT objects
+dht_sensor = dht.DHT11(machine.Pin(PIN_DHT))
+
 
 #==========Utils==========
 def count_set_bits(n):
@@ -61,11 +78,11 @@ def log_if_status():
 #==========MQTT==========
 def connect_to_broker():
 	global mqtt_client
-	log("INF", "MQTT", "Trying to connect to broker...")
+	log("INF", "MQTT", "Trying to connect to broker on " + MQTT_BROKER_HOSTNAME + ":" + str(MQTT_BROKER_PORT))
 	mqtt_client.connect()
 	log("INF", "MQTT", "Connected to broker")
-	mqtt_client.set_last_will("microcontroller/status", "Offline")
-	mqtt_client.publish("microcontroller/status", "Online")
+	mqtt_client.set_last_will(TOPIC_MCU_STATUS, "Offline")
+	mqtt_client.publish(TOPIC_MCU_STATUS, "Online")
 
 #==========Main==========
 def main():
@@ -73,8 +90,12 @@ def main():
 	connect_to_ap(WLAN_SSID, WLAN_PSWD)
 	connect_to_broker()
 	while (True):
-		mcu_temp = (esp32.raw_temperature() - 32) * 5 / 9
-		mqtt_client.publish("microcontroller/temperature", str(mcu_temp))
+		mcu_temp = esp32.raw_temperature()
+		mqtt_client.publish(TOPIC_MCU_TEMPERATURE, str(int(mcu_temp)))
+		dht_sensor.measure()
+		mqtt_client.publish(TOPIC_DHT_TEMPERATURE, str(dht_sensor.temperature()))
+		mqtt_client.publish(TOPIC_DHT_HUMIDITY, str(dht_sensor.humidity()))
+		time.sleep_ms(1000)
 
 if __name__ == "__main__":
 	main()

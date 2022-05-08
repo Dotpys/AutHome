@@ -1,0 +1,30 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
+
+<AuthomeCard>
+	@temperature
+</AuthomeCard>
+
+@code {
+	private int temperature;
+
+	private HubConnection? hubConnection;
+
+    [Parameter]
+	public string HubFunctionName { get; set; } = "#4155c3";
+
+	protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/controlhub"))
+            .Build();
+
+        hubConnection.On<int>("MicrocontrollerTemperature", (temperature) =>
+        {
+			this.temperature = temperature;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+    }
+}

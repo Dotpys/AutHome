@@ -1,15 +1,22 @@
-<div class="card text-white mb-3 m-3" style="max-width: 18rem;">
-    <div class="card-header"><i class="fa-solid @CardTitleIcon"></i> @CardTitle</div>
+<div class="card" style="--accentColor: @AccentColor;">
+    <div class="card-header">
+        <span class="fa-solid @Icon"></span> @Title
+    </div>
     <div class="card-body">
-        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's
-            content.</p>
+        @ChildContent
     </div>
 </div>
 
 @code {
-	[Parameter]
-	public string CardTitleIcon { get; set; } = "fa-rss";
+    [Parameter]
+	public string AccentColor { get; set; } = "#4155c3";
 
 	[Parameter]
-	public string CardTitle { get; set; } = "Card";
+	public string Icon { get; set; } = "fa-address-card";
+
+	[Parameter]
+	public string Title { get; set; } = "This is a card";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
 }

@@ -3,19 +3,13 @@
 
 <PageTitle>Users</PageTitle>
 
-<h1>Users</h1>
-
 @if (users != null) {
     @if (users.Count() != 0) {
-        <div class="list-container">
-            @foreach (var user in users) {
-                <div class="card user-card">
-                    <div class="card-body">
-                        <h5 class="card-title">@user.FirstName @user.LastName</h5>
-                    </div>
-                </div>
-            }
-        </div>
+        @foreach (var user in users) {
+            <AuthomeCard CardTitleIcon="fa-user" CardTitle=@user.FirstName>
+                <h1>@user.FirstName</h1>
+            </AuthomeCard>
+        }
     } else {
         <p>No user registered</p>
     }

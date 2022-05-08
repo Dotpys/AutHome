@@ -22,12 +22,11 @@ public class AutHomeConnectionService : IHostedService, IDisposable
 		_hub = hub;
 		var factory = new MqttFactory();
 		client = factory.CreateMqttClient();
-		
 	}
 
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
-		var mqttClientOptions = new MqttClientOptionsBuilder().WithTcpServer("localhost").Build();
+		var mqttClientOptions = new MqttClientOptionsBuilder().WithTcpServer("192.168.50.7").Build();
 		await client.ConnectAsync(mqttClientOptions, cancellationToken);
 		_logger.LogInformation("Connected to MQTT broker.");
 		await client.SubscribeAsync("authome/#");
@@ -61,21 +60,14 @@ public class TestHandler : IMqttApplicationMessageReceivedHandler
 	{
 		switch (eventArgs.ApplicationMessage.Topic)
 		{
-			case "authome/system/status":
+			case "authome/mcu/temperature":
+				await _hub.Clients.All.SendAsync("MicrocontrollerTemperature", int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString()));
 				break;
-			case "authome/room/kitchen/light":
-				break;
-			case "authome/room/livingroom/light":
-				break;
-			case "authome/room/bedroom/light":
-				break;
-			case "authome/room/bedroom/temperature":
+			case "authome/dht/temperature":
 				await _hub.Clients.All.SendAsync("Temperature", int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString()));
 				break;
-			case "authome/room/bedroom/humidity":
+			case "authome/dht/humidity":
 				await _hub.Clients.All.SendAsync("Humidity", int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString()));
-				break;
-			case "authome/security/door/front" :
 				break;
 			default:
 				break;

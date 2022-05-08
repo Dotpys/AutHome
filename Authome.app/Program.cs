@@ -13,7 +13,7 @@ builder.Services.AddResponseCompression(opts =>
     opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
         new[] { "application/octet-stream" });
 });
-//builder.Services.AddHostedService<AutHomeConnectionService>();
+builder.Services.AddHostedService<AutHomeConnectionService>();
 builder.Services.AddDbContext<AutHomeContext>();
 
 var app = builder.Build();

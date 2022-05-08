@@ -1,18 +1,59 @@
 ﻿@page "/"
 @using AutHome.Shared
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
 
 <PageTitle>Dashboard</PageTitle>
 
-<AuthomeCard CardTitleIcon="fa-temperature-half" CardTitle="Temperatrrrrr"/>
+<TemperatureCard />
 
-<AuthomeCard />
+<AuthomeCard Icon="fa-temperature-half" Title="μC Temp.">
+	<h1>@mcuTemperature °F</h1>
+</AuthomeCard>
 
-<AuthomeCard />
+<AuthomeCard Icon="fa-temperature-half" Title="DHT Temp.">
+	<h1>@dhtTemperature °C</h1>
+</AuthomeCard>
 
-<AuthomeCard />
+<AuthomeCard AccentColor="#00aa00" Icon="fa-droplet" Title="DHT Humidity">
+	<h1>@dhtHumidity %</h1>
+</AuthomeCard>
 
-<AuthomeCard />
+<AuthomeCard>
+	<h1>@dhtHumidity %</h1>
+</AuthomeCard>
 
-<AuthomeCard />
+@code {
+	private int mcuTemperature = 0;
+    private int dhtTemperature = 0;
+    private int dhtHumidity= 0;
 
-<AuthomeCard />
+	private HubConnection? hubConnection;
+
+	protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/controlhub"))
+            .Build();
+
+        hubConnection.On<int>("MicrocontrollerTemperature", (temperature) =>
+        {
+			mcuTemperature = temperature;
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<int>("Temperature", (temperature) => 
+        {
+            dhtTemperature = temperature;
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<int>("Humidity", (humidity) => 
+        {
+            dhtHumidity = humidity;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+    }
+}
