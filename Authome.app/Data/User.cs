@@ -6,6 +6,6 @@ public class User
 	public string FirstName { get; set; } = string.Empty;
 	public string LastName { get; set; } = string.Empty;
 	public DateOnly RegistrationDate { get; set; }
-	public byte[] ImageData { get; set; }
-	public byte[] CharacteristicsData { get; set; }
+	public byte[]? ImageData { get; set; }
+	public byte[]? CharacteristicsData { get; set; }
 }

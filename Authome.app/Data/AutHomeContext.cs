@@ -5,7 +5,7 @@ namespace AutHome;
 
 public class AutHomeContext : DbContext
 {
-	public DbSet<User> Users { get; set; }
+	public DbSet<User> Users { get; set; } = null!;
 
 	protected override void OnConfiguring(DbContextOptionsBuilder options)
 	{
