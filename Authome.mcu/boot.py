@@ -5,6 +5,7 @@ import machine
 import network
 import time
 import umqtt
+from drivers.fingerprint import FingerprintSensor
 
 #==========Costants==========
 #Default AP information.
@@ -12,7 +13,7 @@ WLAN_SSID = "GHST"
 WLAN_PSWD = "wafer4000"
 #MQTT Configuration
 MQTT_CLIENT_ID = "esp32-endpoint"
-MQTT_BROKER_HOSTNAME = "192.168.50.7"
+MQTT_BROKER_HOSTNAME = "192.168.34.7"
 MQTT_BROKER_PORT = 1883
 #MQTT Topics
 TOPIC_BASE = "authome/"
@@ -79,9 +80,9 @@ def log_if_status():
 def connect_to_broker():
 	global mqtt_client
 	log("INF", "MQTT", "Trying to connect to broker on " + MQTT_BROKER_HOSTNAME + ":" + str(MQTT_BROKER_PORT))
+	mqtt_client.set_last_will(TOPIC_MCU_STATUS, "Offline")
 	mqtt_client.connect()
 	log("INF", "MQTT", "Connected to broker")
-	mqtt_client.set_last_will(TOPIC_MCU_STATUS, "Offline")
 	mqtt_client.publish(TOPIC_MCU_STATUS, "Online")
 
 #==========Main==========
@@ -89,13 +90,24 @@ def main():
 	check_if()
 	connect_to_ap(WLAN_SSID, WLAN_PSWD)
 	connect_to_broker()
+	fs = FingerprintSensor(rx=14, tx=12)
+	log("INF", "FING", "Sensore di imprtonta inizializzato")
+	result: int = 0
+	log("INF", "FING", "Appoggia il dito")
 	while (True):
-		mcu_temp = esp32.raw_temperature()
-		mqtt_client.publish(TOPIC_MCU_TEMPERATURE, str(int(mcu_temp)))
-		dht_sensor.measure()
-		mqtt_client.publish(TOPIC_DHT_TEMPERATURE, str(dht_sensor.temperature()))
-		mqtt_client.publish(TOPIC_DHT_HUMIDITY, str(dht_sensor.humidity()))
-		time.sleep_ms(1000)
+		result = fs.generate_image()
+		if (result == 0):
+			break
+	log("INF", "FING", "Impronta riconosciuta, provo a scaricarla...")
+	dat = fs.upload_image()
+	#while (True):
+	#	mcu_temp = esp32.raw_temperature()
+	#	mqtt_client.publish(TOPIC_MCU_TEMPERATURE, str(int(mcu_temp)))
+	#	dht_sensor.measure()
+	#	mqtt_client.publish(TOPIC_DHT_TEMPERATURE, str(dht_sensor.temperature()))
+	#	mqtt_client.publish(TOPIC_DHT_HUMIDITY, str(dht_sensor.humidity()))
+	#	time.sleep_ms(1000)
+
 
 if __name__ == "__main__":
 	main()
