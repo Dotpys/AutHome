@@ -6,9 +6,12 @@
 @if (users != null) {
     @if (users.Count() != 0) {
         @foreach (var user in users) {
-            <AuthomeCard CardTitleIcon="fa-user" CardTitle=@user.FirstName>
-                <h1>@user.FirstName</h1>
-            </AuthomeCard>
+            <UserCard User=user>
+                @if (image != null)
+                {
+                    <img src=@image.Path/>
+                }
+            </UserCard>
         }
     } else {
         <p>No user registered</p>
@@ -19,11 +22,13 @@
 
 @code {
     IEnumerable<User>? users;
+    FingerImage? image;
 
     protected override Task OnInitializedAsync()
     {
-        using var ctx = new AutHomeContext();
+        using var ctx = new AuthomeContext();
         users = ctx.Users.ToList();
+        image = ctx.Images.First();
         return Task.CompletedTask;
     }
 }

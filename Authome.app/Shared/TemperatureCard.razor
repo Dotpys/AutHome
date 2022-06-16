@@ -1,17 +1,55 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @inject NavigationManager NavigationManager
 
-<AuthomeCard>
-	@temperature
+<AuthomeCard Icon="fa-temperature-half" Title=@DeviceName AccentColor="#de922f">
+	<h1>@OutputContent</h1>
 </AuthomeCard>
 
 @code {
-	private int temperature;
+	private float inputTemperature;
 
 	private HubConnection? hubConnection;
 
     [Parameter]
 	public string HubFunctionName { get; set; } = "#4155c3";
+
+    [Parameter]
+    public string DeviceName { get; set; } = "Device";
+
+    [Parameter]
+    public TemperatureScale InputScale { get; set; } = TemperatureScale.Celsius;
+
+    [Parameter]
+    public TemperatureScale OutputScale { get; set; } = TemperatureScale.Celsius;
+
+    private double OutputTemperature
+    {
+        get
+        {
+            if (InputScale == TemperatureScale.Celsius) {
+                if (OutputScale == TemperatureScale.Celsius) return inputTemperature;
+                else if (OutputScale == TemperatureScale.Fahrenheit) return inputTemperature*9/5+32;
+                return inputTemperature + 273.15;
+            } else if (InputScale == TemperatureScale.Fahrenheit) {
+                if (OutputScale == TemperatureScale.Celsius) return (inputTemperature-32)*5/9;
+                else if (OutputScale == TemperatureScale.Fahrenheit) return inputTemperature;
+                return (inputTemperature-32)*5/9+273.15;
+            }
+            if (OutputScale == TemperatureScale.Celsius) return inputTemperature-273.15;
+            else if (OutputScale == TemperatureScale.Fahrenheit) return (inputTemperature-273.15)*9/5+32;
+            return inputTemperature;
+        }
+    }
+
+    private string OutputContent
+    {
+        get
+        {
+            if (OutputScale == TemperatureScale.Celsius) return $"{OutputTemperature:F2} °C";
+            if (OutputScale == TemperatureScale.Fahrenheit) return $"{OutputTemperature:F2} °F";
+            return $"{OutputTemperature:F1} °K";
+        }
+    }
 
 	protected override async Task OnInitializedAsync()
     {
@@ -21,10 +59,17 @@
 
         hubConnection.On<int>("MicrocontrollerTemperature", (temperature) =>
         {
-			this.temperature = temperature;
+			this.inputTemperature = temperature;
             InvokeAsync(StateHasChanged);
         });
 
         await hubConnection.StartAsync();
+    }
+
+    public enum TemperatureScale
+    {
+        Celsius,
+        Fahrenheit,
+        Kelvin
     }
 }

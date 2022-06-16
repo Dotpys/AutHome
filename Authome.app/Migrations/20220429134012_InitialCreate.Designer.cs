@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace AutHome.Migrations
 {
-    [DbContext(typeof(AutHomeContext))]
+    [DbContext(typeof(AuthomeContext))]
     [Migration("20220429134012_InitialCreate")]
     partial class InitialCreate
     {

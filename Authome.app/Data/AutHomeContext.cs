@@ -3,9 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AutHome;
 
-public class AutHomeContext : DbContext
+public class AuthomeContext : DbContext
 {
 	public DbSet<User> Users { get; set; } = null!;
+	public DbSet<FingerImage> Images { get; set; } = null!;
 
 	protected override void OnConfiguring(DbContextOptionsBuilder options)
 	{

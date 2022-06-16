@@ -1,0 +1,45 @@
+@page "/users/new"
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>New User</PageTitle>
+
+<div class="card">
+	<EditForm Model="@model" OnInvalidSubmit="@HandleValidSubmit">
+		<DataAnnotationsValidator />
+		
+
+		<div class="mb-3">
+			<label for="firstName" class="form-label">First Name</label>
+			<InputText id="firstName" class="form-control" @bind-Value="model.FirstName"/>
+		</div>
+	
+		<div class="mb-3">
+			<label for="lastName" class="form-label">Last Name</label>
+			<InputText id="lastName" class="form-control" @bind-Value="model.LastName"/>
+		</div>
+
+		<ValidationSummary />
+
+		<button type="submit" class="btn btn-primary">Register</button>
+	</EditForm>
+</div>
+
+@code
+{
+	private UserModel model = new();
+
+	private void HandleValidSubmit()
+	{
+		
+	}
+
+	public class UserModel
+	{
+		[Required]
+		[StringLength(10, ErrorMessage = "First Name is too long.")]
+		public string FirstName { get; set; } = null!;
+		[Required]
+		[StringLength(10, ErrorMessage = "Last Name is too long.")]
+		public string LastName { get; set; } = null!;
+	}
+}

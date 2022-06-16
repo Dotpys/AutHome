@@ -5,8 +5,9 @@
     box-shadow: 0 0 2px rgba(0,0,0,0.125);
     border: none;
     flex-grow: 1;
-    flex-shrink: 1;
+    flex-basis: 20%;
     color: white;
+    width: auto;
     --accentColor: #4155c3;
 }
 

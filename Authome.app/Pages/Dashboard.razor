@@ -24,13 +24,13 @@
 </AuthomeCard>
 
 @code {
-	private int mcuTemperature = 0;
+    private int mcuTemperature = 0;
     private int dhtTemperature = 0;
-    private int dhtHumidity= 0;
+    private int dhtHumidity = 0;
 
-	private HubConnection? hubConnection;
+    private HubConnection? hubConnection;
 
-	protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         hubConnection = new HubConnectionBuilder()
             .WithUrl(NavigationManager.ToAbsoluteUri("/controlhub"))
@@ -38,7 +38,7 @@
 
         hubConnection.On<int>("MicrocontrollerTemperature", (temperature) =>
         {
-			mcuTemperature = temperature;
+            mcuTemperature = temperature;
             InvokeAsync(StateHasChanged);
         });
 
