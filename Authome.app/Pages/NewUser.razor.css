@@ -1,0 +1,65 @@
+﻿* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	list-style: none;
+	text-decoration: none;
+	font-family: 'Josefin Sans', sans-serif;
+}
+
+.container .card {
+	transition: all 0.3s;
+	background: #404A80;
+}
+
+
+	.container .card:hover {
+		transform: scale(1.05);
+		transition: 0.3s;
+	}
+
+.btn {
+	border: solid 3px;
+	color: white;
+	transition: all 0.3s;
+}
+
+.btn:hover {
+	color: white;
+	transform: scale(1.1);
+	transition: 0.3s;
+}
+
+.form-control {
+	transition: all 0.3s;
+}
+
+.box .form-label {
+	color: white;
+	font-weight: bold;
+	transition: all 0.3s;
+}
+
+.box:hover .form-label {
+	font-weight: bold;
+	font-style: italic;
+	transform: scale(1.1);
+	transition: 0.3s;
+}
+
+.box:hover .form-control {
+	transform: scale(1.05);
+	transition: 0.3s;
+}
+
+.card-header {
+	padding: 5px;
+	font-weight: bold;
+	color: white;
+}
+
+.card-header {
+	padding: 5px;
+	font-weight: bold;
+	color: white;
+}

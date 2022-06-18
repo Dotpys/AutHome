@@ -63,14 +63,14 @@ network_if = network.WLAN(network.STA_IF)
 #MQTT objects
 mqtt_client = mqtt.MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER_HOSTNAME, MQTT_BROKER_PORT, None, None, MQTT_KEEPALIVE)
 #DHT objects
-dht_sensor = dht.DHT11(machine.Pin(PIN_DHT))
-dht_temperature = 0
-dht_humidity = 0
+#dht_sensor = dht.DHT11(machine.Pin(PIN_DHT))
+#dht_temperature = 0
+#dht_humidity = 0
 #Fingerprint sensor
-fingerprint_sensor = fingerprint.FingerprintSensor(rx=14, tx=FINGER_TX)
-fingerprint_sensor_response = 0
+fingerprint_sensor = fingerprint.FingerprintSensor(rx=FINGER_RX, tx=FINGER_TX)
+#fingerprint_sensor_response = 0
 #MCU objects
-mcu_temperature = 0
+#mcu_temperature = 0
 
 
 #==========Utils==========
@@ -164,7 +164,6 @@ def check_connection(c):
 		print("Network interface disactivated")
 	if network_if.isconnected() == False:
 		print("Disconnected from network")
-	
 
 #==========Main==========
 def main():
@@ -173,15 +172,6 @@ def main():
 	b = machine.Pin(RGB_LED_B, machine.Pin.OUT, machine.Pin.PULL_DOWN)
 	
 	a = rgbled.RGBLed(r, g, b)
-	a.set_color(rgbled.RGBLed.Green)
-	time.sleep_ms(500)
-	a.set_color(rgbled.RGBLed.Red)
-	time.sleep_ms(500)
-	a.set_color(rgbled.RGBLed.Cyan)
-	time.sleep_ms(500)
-	a.set_color(rgbled.RGBLed.Black)
-	time.sleep_ms(500)
-	a.set_color(rgbled.RGBLed.White)
 
 	connect_network()
 	connect_to_broker()

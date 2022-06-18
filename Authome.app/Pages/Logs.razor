@@ -1,0 +1,26 @@
+﻿@page "/logs"
+@using AutHome.Data
+
+<PageTitle>Logs</PageTitle>
+
+@if (accessEntries != null)
+{
+        @foreach (var accessEntry in accessEntries)
+        {
+            <p class="h3">@GetAccessText(accessEntry)</p>
+        }
+}
+
+@code {
+    IEnumerable<AccessEntry>? accessEntries;
+    AuthomeContext ctx;
+
+    protected override Task OnInitializedAsync()
+    {
+        ctx = new AuthomeContext();
+        accessEntries = ctx.AccessEntries.OrderBy(entry => entry.Timestamp).ToList();
+        return Task.CompletedTask;
+    }
+
+    private string GetAccessText(AccessEntry accessEntry) => $"{accessEntry.User.FirstName} {accessEntry.User.LastName} accessed at {accessEntry.Timestamp}";
+}

@@ -5,28 +5,29 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<TemperatureCard />
+<TemperatureCard
+    DeviceName="Temperatura MCU"
+    AccentColor="#de922f"
+    InputScale=@TemperatureCard.TemperatureScale.Fahrenheit
+    OutputScale=@TemperatureCard.TemperatureScale.Celsius
+    InputTemperature=@mcuTemperature/>
 
-<AuthomeCard Icon="fa-temperature-half" Title="μC Temp.">
-	<h1>@mcuTemperature °F</h1>
-</AuthomeCard>
+<TemperatureCard
+    DeviceName="Temperatura DHT"
+    AccentColor="#00aa00"
+    InputScale=@TemperatureCard.TemperatureScale.Celsius
+    OutputScale=@TemperatureCard.TemperatureScale.Celsius
+    InputTemperature=@dhtTemperature/>
 
-<AuthomeCard Icon="fa-temperature-half" Title="DHT Temp.">
-	<h1>@dhtTemperature °C</h1>
-</AuthomeCard>
-
-<AuthomeCard AccentColor="#00aa00" Icon="fa-droplet" Title="DHT Humidity">
-	<h1>@dhtHumidity %</h1>
-</AuthomeCard>
-
-<AuthomeCard>
-	<h1>@dhtHumidity %</h1>
-</AuthomeCard>
+<HumidityCard
+    DeviceName="Umiditá DHT"
+    AccentColor="#00aa00"
+    InputHumidity=@dhtHumidity/>
 
 @code {
-    private int mcuTemperature = 0;
-    private int dhtTemperature = 0;
-    private int dhtHumidity = 0;
+    private int? mcuTemperature = null;
+    private int? dhtTemperature = null;
+    private int? dhtHumidity = null;
 
     private HubConnection? hubConnection;
 

@@ -4,31 +4,22 @@
 <PageTitle>Users</PageTitle>
 
 @if (users != null) {
-    @if (users.Count() != 0) {
-        @foreach (var user in users) {
-            <UserCard User=user>
-                @if (image != null)
-                {
-                    <img src=@image.Path/>
-                }
-            </UserCard>
-        }
-    } else {
-        <p>No user registered</p>
+    @foreach (var user in users) {
+        <UserCard User=user/>
     }
+    <AddUserCard/>
 } else {
-    <p>No data</p>
+    <p class="h3">Retrieving data from server...</p>
 }
 
 @code {
     IEnumerable<User>? users;
-    FingerImage? image;
+    AuthomeContext ctx;
 
     protected override Task OnInitializedAsync()
     {
-        using var ctx = new AuthomeContext();
+        ctx = new AuthomeContext();
         users = ctx.Users.ToList();
-        image = ctx.Images.First();
         return Task.CompletedTask;
     }
 }

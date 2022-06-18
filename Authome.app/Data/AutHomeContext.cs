@@ -7,6 +7,7 @@ public class AuthomeContext : DbContext
 {
 	public DbSet<User> Users { get; set; } = null!;
 	public DbSet<FingerImage> Images { get; set; } = null!;
+	public DbSet<AccessEntry> AccessEntries { get; set; } = null!;
 
 	protected override void OnConfiguring(DbContextOptionsBuilder options)
 	{

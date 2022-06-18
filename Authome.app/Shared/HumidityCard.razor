@@ -1,0 +1,16 @@
+﻿<AuthomeCard Icon="fa-droplet" Title=@DeviceName AccentColor=@AccentColor >
+	<p class="h1">@OutputContent</p>
+</AuthomeCard>
+
+@code {
+	[Parameter]
+    public string DeviceName { get; set; } = "Device";
+
+    [Parameter]
+    public string AccentColor { get; set; } = "#de922f";
+
+    [Parameter]
+    public double? InputHumidity { get; set; }
+
+    private string OutputContent => InputHumidity == null ? "No data available." : $"{InputHumidity.Value:F1} %";
+}

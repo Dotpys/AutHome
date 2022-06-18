@@ -1,18 +1,23 @@
 @using Data
 
-<AuthomeCard Title=@Title Icon="fa-user" >
-	@ChildContent
+<AuthomeCard Icon="fa-user" Title=@Title>
+	<p class="h3">@SignInInfo</p>
+	@if (User.FingerImage != null)
+	{
+		<img src=@User.FingerImage.Path/>
+	}
+	else
+	{
+		<p class="h3">No finger image found.</p>
+		<a href="/user/@User.Id.ToString("n")/register">Register</a>
+	}
 </AuthomeCard>
 
 @code {
 	[Parameter]
-	public User User { get; set; }
+	public User User { get; set; } = null!;
 
-	[Parameter]
-	public RenderFragment? ChildContent { get; set; }
+	private string Title => $"{User.FirstName} {User.LastName}";
 
-	private string Title
-	{
-		get { return $"{User.FirstName} {User.LastName}"; }
-	}
+	private string SignInInfo => $"Signed on {User.RegistrationDate}";
 }
