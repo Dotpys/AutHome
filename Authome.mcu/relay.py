@@ -1,22 +1,18 @@
-from machine import Pin
-from time import sleep
-
-RELAY_ON = True
-RELAY_OFF = False
+import machine
+import time
 
 class Relay:
-	"""
-	"""
 
-	__slots__ = ("__state", "__relay")
+	__state = 0
+	__relay = None
 
-	def __init__(self, id):
-		self.__state = RELAY_OFF
-		self.__relay = Pin(
+	def __init__(self, id, value):
+		self.__state = value
+		self.__relay = machine.Pin(
 			id,
-			mode=Pin.OUT,
-			pull=Pin.PULL_DOWN,
-			value=self.__state)
+			mode = machine.Pin.OUT,
+			pull = machine.Pin.PULL_DOWN,
+			value = self.__state)
 
 
 	def on():
@@ -27,27 +23,44 @@ class Relay:
 		__relay.off()
 
 
+	def state():
+		return __state;
+
+
 	def toggle(self):
 		self.__state = not self.__state
 		self.__relay.value(self.__state)
 	
 
-	def openNC():
-		pass
+	def openNC(self):
+		self.__state = 0
+		self.__relay.value(self.__state)
 
 
-	def closeNC():
-		pass
+	def closeNC(self):
+		self.__state = 1
+		self.__relay.value(self.__state)
 
 
-	def openNO():
-		pass
+	def openNO(self):
+		self.__state = 1
+		self.__relay.value(self.__state)
 
 
-	def closeNO():
-		pass
+	def closeNO(self):
+		self.__state = 0
+		self.__relay.value(self.__state)
 
-a = Relay(12)
-while (True):
-	a.toggle()
-	sleep(1)
+class Lock(Relay):
+	
+	__relay = None
+	
+	def __init__(self, pin):
+		super().__init__(pin, 1)
+	
+	def timed_unlock(self, millis_before, millis):
+		'''Waits millis_before milliseconds, opens the lock for millis milliseconds, then closes the lock.'''
+		time.sleep_ms(millis_before)
+		self.closeNO()
+		time.sleep_ms(millis)
+		self.openNO()

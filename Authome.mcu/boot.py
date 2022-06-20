@@ -7,6 +7,7 @@ import time
 import umqtt.robust as mqtt
 import fingerprint
 import rgbled
+import relay
 
 #==========Costants==========
 #Default AP information.
@@ -25,6 +26,14 @@ TOPIC_MCU_TEMPERATURE = TOPIC_MCU + "temperature"
 TOPIC_DHT = TOPIC_BASE + "dht/"
 TOPIC_DHT_TEMPERATURE = TOPIC_DHT + "temperature"
 TOPIC_DHT_HUMIDITY = TOPIC_DHT + "humidity"
+TOPIC_LOCK = "authome/relay/0"
+TOPIC_RELAY_1 = "authome/relay/1"
+TOPIC_RELAY_2 = "authome/relay/2"
+TOPIC_RELAY_3 = "authome/relay/3"
+TOPIC_RELAY_4 = "authome/relay/4"
+TOPIC_RELAY_5 = "authome/relay/5"
+TOPIC_RELAY_6 = "authome/relay/6"
+TOPIC_RELAY_7 = "authome/relay/7"
 #Pin assignment
 RGB_LED_R = 0	# 0 RGB Led, R channel
 				# 1 Do not use, REPL TX
@@ -40,16 +49,16 @@ RGB_LED_B = 4	# 4 RGB Led, B channel
 				#12 Do not use, risk of bootloop
 FINGER_TX = 13	#13 UART TX, FINGERPRINT SENSOR RX
 FINGER_RX = 14	#14 UART RX, FINGERPRINT SENSOR TX
-				#15 
+RELAY_5	= 15	#15 Relay 5 (Demo)
 				#16 Do not use, Embedded flash
 				#17 Do not use, Embedded flash
-				#18 
-				#19 
-				#21 
-				#22 
-				#23 
-				#25 
-				#26 
+RELAY_4	= 18	#18 Relay 4 (Demo)
+RELAY_3	= 19	#19 Relay 3 (Demo)
+RELAY_2	= 21	#21 Relay 2 (Demo)
+RELAY_1	= 22	#22 Relay 1 (Demo)
+RELAY_0	= 23	#23 Relay 0 (Lock)
+RELAY_6	= 25	#25 Relay 6 (Demo)
+RELAY_7	= 26	#26 Relay 7 (Demo)
 				#27 
 				#32 
 PIN_DHT = 33	#33 DHT
@@ -67,11 +76,17 @@ mqtt_client = mqtt.MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER_HOSTNAME, MQTT_BROKER_
 #dht_temperature = 0
 #dht_humidity = 0
 #Fingerprint sensor
+rgb_led = rgbled.RGBLed(RGB_LED_R, RGB_LED_G, RGB_LED_B)
 fingerprint_sensor = fingerprint.FingerprintSensor(rx=FINGER_RX, tx=FINGER_TX)
-#fingerprint_sensor_response = 0
-#MCU objects
-#mcu_temperature = 0
-
+lock = relay.Lock(RELAY_0)
+relay_1 = relay.Relay(RELAY_1, 0)
+relay_2 = relay.Relay(RELAY_2, 0)
+relay_3 = relay.Relay(RELAY_3, 0)
+relay_4 = relay.Relay(RELAY_4, 0)
+relay_5 = relay.Relay(RELAY_5, 0)
+relay_6 = relay.Relay(RELAY_6, 0)
+relay_7 = relay.Relay(RELAY_7, 0)
+current_command = None
 
 #==========Utils==========
 def count_set_bits(n):
@@ -117,36 +132,17 @@ def connect_to_broker():
 
 
 #==========Tasks==========
-def ping(callback_params):
+def publish_sensor_data(callback_params):
 	temp = esp32.raw_temperature()
 	mqtt_client.publish(TOPIC_MCU_TEMPERATURE, str(temp))
-
-def check_sensor_data(callback_params):
-	"""
-	Effettua una lettura di tutti i sensori del sistema, manda messaggi di aggionrnamento dei valori al broker solo se necessario.
-	"""
-	global dht_temperature, dht_humidity, mcu_temperature
-	
-	#Internal ESP32 temperature sensor [F]
-	temp = esp32.raw_temperature()
-	if temp != mcu_temperature:
-		mcu_temperature = temp
-		mqtt_client.publish(TOPIC_MCU_TEMPERATURE, str(mcu_temperature))
-		log("INF", "ESPM", "New reading on internal temperature: " + str(mcu_temperature) + "°F, sent mqtt message")
-	
-	#DHT temperature & humidity sensor [C]
+	log("INF", "ESPT", "New reading on internal temperature: " + str(temp) + "°F, sent mqtt message")
 	#dht_sensor.measure()
 	#temp = dht_sensor.temperature()
-	if temp != dht_temperature:
-		#dht_temperature = temp
-		mqtt_client.publish(TOPIC_DHT_TEMPERATURE, str(dht_temperature))
-		#log("INF", "DHTT", "New reading on DHT temperature: " + str(dht_temperature) + "°C, sent mqtt message")
-	#DHT temperature sensor [C]
+	#mqtt_client.publish(TOPIC_DHT_TEMPERATURE, str(temp))
+	log("INF", "DHTT", "New reading on DHT temperature: " + str(temp) + "°C, sent mqtt message")
 	#temp = dht_sensor.humidity()
-	if temp != dht_humidity:
-		#dht_humidity = temp
-		mqtt_client.publish(TOPIC_DHT_HUMIDITY, str(dht_humidity))
-		#log("INF", "DHTH", "New reading on DHT humidity: " + str(dht_humidity) + "%, sent mqtt message")
+	#mqtt_client.publish(TOPIC_DHT_HUMIDITY, str(temp))
+	log("INF", "DHTH", "New reading on DHT humidity: " + str(temp) + "%, sent mqtt message")
 
 def finger_check():
 	result: int = 0
@@ -159,28 +155,71 @@ def finger_check():
 	dat = fingerprint_sensor.upload_image()
 	mqtt_client.publish("authome/fingerprint/data", dat[1])
 
-def check_connection(c):
-	if network_if.active() == False:
-		print("Network interface disactivated")
-	if network_if.isconnected() == False:
-		print("Disconnected from network")
 
+def register_user(user_id, position):
+	'''
+	- user_id viene fornito sotto forma di stringa che rappresenta il GUID dell'utente nell'applicazione.
+	- position viene fornito sotto forma di numero che rappresenta l'indice nella memoria del modulo
+		della posizione in cui viene salvato il file di caratteristiche.
+	
+
+
+	1. Carica la foto dell'impronta tramite MQTT (user_id + buffer_immagine)
+	2. Carica le caratteristiche dell'impronta tramite MQTT (user_id + buffer_caratteristiche)
+	'''
+	result = 0;
+	result_data = None
+	while (True):
+		result = fingerprint_sensor.generate_image();
+		if (result == 0):
+			break
+	log("INF", "FING", "Impronta riconosciuta, genero un file di caratteristiche.")
+	while (True):
+		result = fingerprint_sensor.image_2_tz(0x01);	#Genera un file di caratteristiche e lo memorizza in CharBuf1
+		if (result == 0):
+			break
+	log("INF", "FING", "File di caratteristiche generato, lo immagazzino in memoria.")
+	while (True):
+		#In teoria position dovrebbe essere un numero a due byte con questo formato
+		# 0b000000aa bbbbbbbb
+		# dove i bit a rappresentano il numero della pagina [0-4]
+		# dove i bit b rappresentano il numero nella pagina [0-255]
+		#Tutto questo per un totale di 1024 impronte immagazzinate nel modulo.
+		result = fingerprint_sensor.store(0x01, position)	#Immagazzina il file di caratteristiche che si trova in CharBuf1 nel DB interno delle impronte digitali
+		if (result == 0):
+			break
+	log("INF", "FING", "File di caratteristiche immagazzinato. Carico il buffer di immagine sul microcontrollore per caricarlo su MQTT.")
+	while (True):
+		result_data = fingerprint_sensor.upload_image()
+		if (result_data[0] == 0):
+			break
+	#TODO: publish su un topic di (user_id, result_data[1])
+	log("INF", "FING", "Buffer di immagine caricato. Carico il buffer di caratteristiche sul microcontrollore per caricarlo su MQTT.")
+	while (True):
+		result_data = fingerprint_sensor.upChar()
+		if (result_data[0] == 0):
+			break
+	#TODO: publish su un topic di (user_id, result_data[1])
+	log("INF", "FING", "Buffer di caratteristiche caricato. Registrazione di " + user_id + " completata.")
+	
 #==========Main==========
 def main():
-	r = machine.Pin(RGB_LED_R, machine.Pin.OUT, machine.Pin.PULL_DOWN)
-	g = machine.Pin(RGB_LED_G, machine.Pin.OUT, machine.Pin.PULL_DOWN)
-	b = machine.Pin(RGB_LED_B, machine.Pin.OUT, machine.Pin.PULL_DOWN)
-	
-	a = rgbled.RGBLed(r, g, b)
-
+	#Initialization
+	rgb_led.set_color(rgbled.RGBLed.Yellow);
 	connect_network()
 	connect_to_broker()
-	timer_mcu_temp = machine.Timer(0)
-	timer_mcu_temp.init(period=5*1000, callback=ping)
-	#timer_sensor_check = machine.Timer(1)
-	#timer_sensor_check.init(period=1000, callback=check_sensor_data)
+	timer_sensor_data = machine.Timer(0)
+	timer_sensor_data.init(period=5*1000, callback=publish_sensor_data)
+	#Normal behaviour
+	rgb_led.set_color(rgbled.RGBLed.Green);
 	while (True):
-		finger_check()
+		#controllare il comando
+		if (current_command == None):
+			#check sulla presenza di una impronta
+			pass
+		if (current_command != None):
+			#check id comando
+			pass
 
 
 if __name__ == "__main__":
