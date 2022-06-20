@@ -1,23 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore.Infrastructure;
-
-namespace AutHome.Data;
+﻿namespace AutHome.Data;
 
 public class AccessEntry
 {
-	private User _user;
-	private ILazyLoader LazyLoader { get; set; } = null!;
-
+	/// <summary>
+	/// The identifier of this specific entity.
+	/// </summary>
 	public Guid Id { get; set; }
-	public DateTime Timestamp { get; set; }
-	bool AccessGranted { get; set; }
-	public User User
-	{
-		get => LazyLoader.Load(this, ref _user);
-		set => _user = value;
-	}
 
-	private AccessEntry(ILazyLoader lazyLoader)
-	{
-		LazyLoader = lazyLoader;
-	}
+	/// <summary>
+	/// Date and Time at wich access was registered.
+	/// </summary>
+	public DateTime Timestamp { get; set; }
+
+	/// <summary>
+	/// Whether this access attempt was successful or not.
+	/// </summary>
+	public bool AccessGranted { get; set; }
+
+	public User User { get; set; }
 }

@@ -49,18 +49,20 @@ class FingerprintSensor:
 
 	__address = 0xFFFFFFFF
 	__password = 0x00000000
+	__packet_size = 128
 
-	#0xEF01(2) | address(4) | packet_id(1) | packet_size(2)
-	__packet_header_buffer = bytearray(9)
-	#Content(N [max 128]) | Checksum(2)
-	__packet_data_buffer = bytearray(9+128+2)#TODO Implementare autoresize di questo buffer in base alle caratteristiche del sensore
+	__packet_head_buffer = bytearray(9)
+	__packet_body_buffer = None
 
 
 	__image_buffer = bytearray(0x9000)
+	__char_buffer_1 = bytearray(0x600)
+	__char_buffer_2 = bytearray(0x600)
+
 
 	def __init__(self, tx: int, rx: int) -> None:
-		self.channel = machine.UART(2)
-		self.channel.init(
+		self.__channel = machine.UART(2)
+		self.__channel.init(
 			baudrate=57600,
 			bits=8,
 			parity=None,
@@ -70,13 +72,19 @@ class FingerprintSensor:
 			timeout=1000,
 			timeout_char=1000)
 		time.sleep_ms(500)
+		result = self.read_system_parameters()
+		if (result[0] == __ACK_OK):
+			self.__packet_size = 2**(5 + int.from_bytes(result[1][12:14], 'big'))
+		self.__packet_body_buffer = bytearray(self.__packet_size)
+
+
 
 
 	#Instruction 0x01
 	def generate_image(self):
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, [__OPCODE_GENIMG])
-		writtenBytes = self.channel.write(instruction_packet)
-		response_packet = self.channel.read(12)
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, [__OPCODE_GENIMG])
+		writtenBytes = self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(12)
 		#TODO: Add logging
 		return response_packet[9]
 
@@ -85,20 +93,20 @@ class FingerprintSensor:
 	def image_2_tz(self, buffer_id: int) -> int:
 		if (buffer_id != 0x01):
 			buffer_id = 0x02
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, [__OPCODE_IMG2TZ, buffer_id])
-		self.channel.write(instruction_packet)
-		response_packet = self.channel.read(12)
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, [__OPCODE_IMG2TZ, buffer_id])
+		self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(12)
 		return response_packet[9]
 
 
 	#Instruction 0x03
 	def match(self) -> tuple[int, int]:
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND,[__OPCODE_MATCH])
-		self.channel.write(instruction_packet)
-		response_packet = self.channel.read(14)
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND,[__OPCODE_MATCH])
+		self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(14)
 		response_ack = response_packet[9]
 		if (response_ack == __ACK_OK):
-			return (response_ack, from_bytes(response_packet[10:2]))
+			return (response_ack, int.from_bytes(response_packet[10:2], 'big')) #slice fatto male?
 		else:
 			return (response_ack, [])
 
@@ -112,34 +120,34 @@ class FingerprintSensor:
 		content.append((start_page & 0x00FF) >> 0)
 		content.append((page_number & 0xFF00) >> 8)
 		content.append((page_number & 0x00FF) >> 0)
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, content)
-		self.channel.write(instruction_packet)
-		response_packet = self.channel.read(16)
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
+		self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(16)
 		response_ack = response_packet[9]
 		if(response_ack == __ACK_OK):
-			return (response_ack, from_bytes(response_packet[10:2]))
+			return (response_ack, int.from_bytes(response_packet[10:2], 'big')) #slice fatto male?
 		else:
 			return (response_ack, [])
 
 
 	#Instruction 0x05
 	def regModel(self) -> int:
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, [__OPCODE_REGMODEL])
-		self.channel.write(instruction_packet)
-		response_packet = self.channel.read(12)
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, [__OPCODE_REGMODEL])
+		self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(12)
 		return response_packet[9]
 
 
 	#Instruction 0x06
-	def store(self, bufferID: int, pageID) -> int:
+	def store(self, buffer_id: int, page_id) -> int:
 		if(buffer_id != 0x01):
 			buffer_id = 0X02
-		content = [__OPCODE_STORE, bufferID]
-		content.append((pageID & 0xFF00) >> 8)
-		content.append((pageID & 0x00FF) >> 0)
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, content)
-		self.channel.write(instruction_packet)
-		response_packet = self.channel.read(12)
+		content = [__OPCODE_STORE, buffer_id]
+		content.append((page_id & 0xFF00) >> 8)
+		content.append((page_id & 0x00FF) >> 0)
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
+		self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(12)
 		return response_packet[9]
 
 
@@ -150,53 +158,69 @@ class FingerprintSensor:
 		content = [__OPCODE_LOADCHAR, bufferID]
 		content.append((pageID & 0xFF00) >> 8)
 		content.append((pageID & 0x00FF) >> 0)
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, content)
-		self.channel.write(instruction_packet)
-		response_packet = self.channel.read(12)
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
+		self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(12)
 		return response_packet[9]
 
 
-	  #Instruction 0x08
-	
 	#Instruction 0x08
-	def upChar(self, bufferID: int) -> int:
+	def upload_characteristic(self, buffer_id: int) -> tuple[int, bytes]:
+		"""
+		Il modulo invia i dati dell'immagine dal buffer di immagini sulla linea seriale.
+		"""
+		#Genera il pacchetto di istruzioni e lo invia
 		if(buffer_id != 0x01):
 			buffer_id = 0X02
-		content = [__OPCODE_UPCHAR, bufferID]
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, content)
-		self.channel.write(instruction_packet)
-		response_packet = self.receive_packet(12)
+		content = [__OPCODE_UPCHAR, buffer_id]
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
+		self.__channel.write(instruction_packet)
+		#Riceve il pacchetto di risposta.
+		response_packet = self.__channel.read(12)
 		response_ack = response_packet[9]
-
 		if (response_ack == __ACK_OK):
-			print("Sending characteristics to host...")
-			characteristics: bytes = []
+			#Codice di risposta corretto, il modulo invia altri pacchetti.
+			progress = 0
 			end: bool = False
 			while (not end):
-				data_packet = self.receive_packet()
-
-				if(data_packet ["id"] == __PACKET_ID_ENDDATA):
+				#Legge l'intestazione del pacchetto.
+				self.__channel.readinto(self.__packet_head_buffer, 9)
+				#Estrae e controlla il codice del pacchetto, se risulta uguale ad __PACKET_ID_ENDDATA significa che é questo
+				#é l'ultimo pacchetto che il modulo invierá.
+				packet_id = int.from_bytes(self.__packet_head_buffer[6:7], 'big')
+				if (packet_id == __PACKET_ID_ENDDATA):
 					end = True
-				characteristics += data_packet["data"]
-			return (response_ack, characteristics)
+				#Legge il contenuto del pacchetto.
+				self.__channel.readinto(self.__packet_body_buffer, self.__packet_size)
+				if (buffer_id == 0x01):
+					self.__char_buffer_1[progress:(progress+self.__packet_size)] = self.__packet_body_buffer[0:self.__packet_size]
+				if (buffer_id == 0x02):
+					self.__char_buffer_2[progress:(progress+self.__packet_size)] = self.__packet_body_buffer[0:self.__packet_size]
+				progress+=self.__packet_size
+				#Legge i due byte di checksum.
+				self.__channel.read(2)
+			if (buffer_id == 0x01):
+				return (response_ack, self.__char_buffer_1)
+			if (buffer_id == 0x02):
+				return (response_ack, self.__char_buffer_1)
 		else:
 			return (response_ack, [])
 
 
 	#Instruction 0x09
-	def download_char(self, bufferID: int) -> tuple[int, int]:
-		content = [__OPCODE_DOWNCHAR, bufferID]
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, content)
-		self.channel.write(instruction_packet)
-		response_packet = self.channel.read(12)
+	def download_char(self, buffer_id: int) -> tuple[int, int]: #Da rivedere nel caso viene usato
+		content = [__OPCODE_DOWNCHAR, buffer_id]
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
+		self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(12)
 		response_ack = response_packet(9)
 
 		if(response_ack == __ACK_OK):
 			characteristic: bytes = []
 			end: bool = False
 			while(not end):
-				data_packet = self.receive_packet()
-				if(data_packet["id"] == __PACKET_ID_ENDDATA):
+				data_packet = self.__channel.read(12)
+				if(data_packet[9] == __PACKET_ID_ENDDATA):
 					end = True
 				characteristic += (data_packet["data"])
 			return (response_ack, characteristic)
@@ -207,48 +231,52 @@ class FingerprintSensor:
 	#Instruction 0x0A
 	def upload_image(self) -> tuple[int, bytes]:
 		"""
-		Il modulo di impronta carica i dati dell'immagine dal buffer di immagini.
+		Il modulo invia i dati dell'immagine dal buffer di immagini sulla linea seriale.
 		"""
-		#Sends the instruction packet
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, [__OPCODE_UPIMAGE])
-		self.channel.write(instruction_packet)
-
-		#Receives the response packet
-		#response_packet = self.receive_packet()
-		self.channel.readinto(self.__packet_header_buffer, 9)
-		self.channel.readinto(self.__packet_data_buffer, int.from_bytes(self.__packet_header_buffer[7:9], 'big'))
-		response_ack = self.__packet_data_buffer[0]
-
+		#Genera il pacchetto di istruzioni e lo invia
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, [__OPCODE_UPIMAGE])
+		self.__channel.write(instruction_packet)
+		#Riceve il pacchetto di risposta.
+		response_packet = self.__channel.read(12)
+		response_ack = response_packet[9]
 		if (response_ack == __ACK_OK):
-			print("Receiving data from fingerprint module...")
+			#Codice di risposta corretto, il modulo invia altri pacchetti.
 			progress = 0
 			end: bool = False
 			while (not end):
-				self.channel.readinto(self.__packet_header_buffer, 9)
-				packet_id = int.from_bytes(self.__packet_header_buffer[6:7], 'big')
-
+				#Legge l'intestazione del pacchetto.
+				self.__channel.readinto(self.__packet_head_buffer, 9)
+				#Estrae e controlla il codice del pacchetto, se risulta uguale ad __PACKET_ID_ENDDATA significa che é questo
+				#é l'ultimo pacchetto che il modulo invierá.
+				packet_id = int.from_bytes(self.__packet_head_buffer[6:7], 'big')
 				if (packet_id == __PACKET_ID_ENDDATA):
 					end = True
-				self.channel.readinto(self.__packet_data_buffer, int.from_bytes(self.__packet_header_buffer[7:9], 'big')-2)
-				self.__image_buffer[progress:progress+128] = self.__packet_data_buffer[0:128]
-				progress+=int.from_bytes(self.__packet_header_buffer[7:9], 'big')-2
-				self.channel.read(2)
-				print("Received " + str(progress) + " Bytes")
-			print("Image size: " + str(progress) + " Bytes")
+				#Legge il contenuto del pacchetto.
+				self.__channel.readinto(self.__packet_body_buffer, self.__packet_size)
+				self.__image_buffer[progress:(progress+self.__packet_size)] = self.__packet_body_buffer[0:self.__packet_size]
+				progress+=self.__packet_size
+				#Legge i due byte di checksum.
+				self.__channel.read(2)
 			return (response_ack, self.__image_buffer)
 		else:
 			return (response_ack, [])
 
 
 	#Instruction 0x0F
-	def read_system_parameters(self):
-		instruction_packet = self.generate_packet(__PACKET_ID_COMMAND, [__OPCODE_READSYSPARA])
-		self.channel.write(instruction_packet)
-		response_packet = self.channel.read(28)
-		return ReadSysParaResponseType.deserialize(response_packet[10:27])
+	def read_system_parameters(self) -> tuple[int, bytes]:
+		#Genera il pacchetto di istruzione e lo invia.
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, [__OPCODE_READSYSPARA])
+		self.__channel.write(instruction_packet)
+		#Legge il contenuto del pacchetto.
+		response_packet = self.__channel.read(28)
+		response_ack = response_packet[9]
+		if (response_ack == __ACK_OK):
+			return (response_ack, response_packet[10:26])
+		else:
+			return (response_ack, [])
 
 
-	def generate_packet(self, packet_id, content):
+	def __generate_packet(self, packet_id, content):
 		result = bytearray(__PACKET_HEADER)
 		result.append((self.__address & 0xFF000000) >> 24)
 		result.append((self.__address & 0x00FF0000) >> 16)
@@ -267,64 +295,3 @@ class FingerprintSensor:
 		result.append((checksum & 0x0000FF00) >> 8)
 		result.append((checksum & 0x000000FF) >> 0)
 		return result
-
-
-	def receive_packet(self):
-		packet_header = self.channel.read(9)
-		baotou = int.from_bytes(packet_header[0:2], 'big')
-		address = int.from_bytes(packet_header[2:6], 'big')
-		packet_id = int.from_bytes(packet_header[6:7], 'big')
-		packet_size = int.from_bytes(packet_header[7:9], 'big')
-		packet_data = self.channel.read(packet_size-2)
-		packet_checksum = int.from_bytes(self.channel.read(2), 'big')
-		return {
-			"baotou": baotou,
-			"address": address,
-			"id": packet_id,
-			"size": packet_size,
-			"data": packet_data,
-			"checksum": packet_checksum
-		}
-
-
-class ReadSysParaResponseType:
-	"""
-	Represents the data structure sent
-	by the fingerprint sensor to respond
-	to a ReadSysParam command.
-	"""
-
-	state_register = 0
-	system_id = 0
-	lib_size = 0
-	security_level = 0
-	device_address = 0
-	packet_address = 0
-	transmission_speed = 0
-
-	@classmethod
-	def deserialize(cls, data: bytearray):
-		result: ReadSysParaResponseType = ReadSysParaResponseType()
-		result.state_register = int.from_bytes(data[0:2], 'big')
-		result.system_id = int.from_bytes(data[2:4], 'big')
-		result.lib_size = int.from_bytes(data[4:6], 'big')
-		result.security_level = int.from_bytes(data[7:8], 'big')
-		result.device_address = int.from_bytes(data[8:12], 'big')
-		result.packet_address = int.from_bytes(data[12:14], 'big')
-		result.transmission_speed = int.from_bytes(data[14:16], 'big')
-		return result
-
-
-#fs = FingerprintSensor(rx=14, tx=12)
-#fs.search(4, 0x1234, 0x6543)
-#print("Sensore di imprtonta inizializzato")
-#result: int = 0
-#print("Appoggia il dito")
-#while (True):
-#	result = fs.generate_image()
-#	if (result == __ACK_OK):
-#		break
-#print("Impronta riconosciuta, provo a scaricarla...")
-#dat = fs.upload_image()
-
-#ZFM-20

@@ -101,6 +101,20 @@ def log(level, topic, message):
 	#Log trough MQTT
 	#TODO
 
+def bytes_to_guid(guid_bytes):
+	'''
+	Ritorna la rappresentazione sotto forma di stringa del GUID passato come argomento. 
+
+	Formato in entrata b'\\x10\\x0E\\xBB\\xB6\\x45\\xF9\\x4C\\x09\\x9F\\x0B\\x99\\x22\\x3B\\xB7\\xAD\\x37'
+	
+	Formato di uscita "100EBBB6-45F9-4C09-9F0B-99223BB7AD37"
+	'''
+	result = ""
+	for b in  guid_bytes:
+		result += f"{b:02X}"
+	return result
+
+
 #==========WLAN==========
 def connect_network():
 	if network_if.active() == False:
@@ -135,14 +149,14 @@ def connect_to_broker():
 def publish_sensor_data(callback_params):
 	temp = esp32.raw_temperature()
 	mqtt_client.publish(TOPIC_MCU_TEMPERATURE, str(temp))
-	log("INF", "ESPT", "New reading on internal temperature: " + str(temp) + "°F, sent mqtt message")
+	#log("INF", "ESPT", "New reading on internal temperature: " + str(temp) + "°F, sent mqtt message")
 	#dht_sensor.measure()
 	#temp = dht_sensor.temperature()
 	#mqtt_client.publish(TOPIC_DHT_TEMPERATURE, str(temp))
-	log("INF", "DHTT", "New reading on DHT temperature: " + str(temp) + "°C, sent mqtt message")
+	#log("INF", "DHTT", "New reading on DHT temperature: " + str(temp) + "°C, sent mqtt message")
 	#temp = dht_sensor.humidity()
 	#mqtt_client.publish(TOPIC_DHT_HUMIDITY, str(temp))
-	log("INF", "DHTH", "New reading on DHT humidity: " + str(temp) + "%, sent mqtt message")
+	#log("INF", "DHTH", "New reading on DHT humidity: " + str(temp) + "%, sent mqtt message")
 
 def finger_check():
 	result: int = 0
@@ -156,9 +170,9 @@ def finger_check():
 	mqtt_client.publish("authome/fingerprint/data", dat[1])
 
 
-def register_user(user_id, position):
+def register_user(user_id: bytes, position):
 	'''
-	- user_id viene fornito sotto forma di stringa che rappresenta il GUID dell'utente nell'applicazione.
+	- user_id viene fornito sotto forma di array di byte che rappresenta il GUID dell'utente nell'applicazione.
 	- position viene fornito sotto forma di numero che rappresenta l'indice nella memoria del modulo
 		della posizione in cui viene salvato il file di caratteristiche.
 	
@@ -169,38 +183,38 @@ def register_user(user_id, position):
 	'''
 	result = 0;
 	result_data = None
+	log("INF", "FING", "Registrazione utente iniziata, appoggiare l'impronta sul modulo.")
 	while (True):
 		result = fingerprint_sensor.generate_image();
 		if (result == 0):
 			break
-	log("INF", "FING", "Impronta riconosciuta, genero un file di caratteristiche.")
-	while (True):
-		result = fingerprint_sensor.image_2_tz(0x01);	#Genera un file di caratteristiche e lo memorizza in CharBuf1
-		if (result == 0):
-			break
-	log("INF", "FING", "File di caratteristiche generato, lo immagazzino in memoria.")
-	while (True):
-		#In teoria position dovrebbe essere un numero a due byte con questo formato
-		# 0b000000aa bbbbbbbb
-		# dove i bit a rappresentano il numero della pagina [0-4]
-		# dove i bit b rappresentano il numero nella pagina [0-255]
-		#Tutto questo per un totale di 1024 impronte immagazzinate nel modulo.
-		result = fingerprint_sensor.store(0x01, position)	#Immagazzina il file di caratteristiche che si trova in CharBuf1 nel DB interno delle impronte digitali
-		if (result == 0):
-			break
-	log("INF", "FING", "File di caratteristiche immagazzinato. Carico il buffer di immagine sul microcontrollore per caricarlo su MQTT.")
+	log("INF", "FING", "Impronta letta, carico l'immagine sul microcontrollore.")
 	while (True):
 		result_data = fingerprint_sensor.upload_image()
 		if (result_data[0] == 0):
 			break
-	#TODO: publish su un topic di (user_id, result_data[1])
-	log("INF", "FING", "Buffer di immagine caricato. Carico il buffer di caratteristiche sul microcontrollore per caricarlo su MQTT.")
+	image_buffer = result_data[1]
+	log("INF", "FING", "Caricamento completato, genero le caratteristiche dell'impronta.")
 	while (True):
-		result_data = fingerprint_sensor.upChar()
+		result = fingerprint_sensor.image_2_tz(0x01);
+		if (result == 0):
+			break
+	log("INF", "FING", "Caratteristiche generate, le immagazzino in memoria.")
+	while (True):
+		result = fingerprint_sensor.store(0x01, position)
+		if (result == 0):
+			break
+	log("INF", "FING", "Caratteristiche immagazzinate, le carico sul microcontrollore.")
+	while (True):
+		result_data = fingerprint_sensor.upload_characteristic(0x01)
 		if (result_data[0] == 0):
 			break
-	#TODO: publish su un topic di (user_id, result_data[1])
-	log("INF", "FING", "Buffer di caratteristiche caricato. Registrazione di " + user_id + " completata.")
+	char_buffer = result_data[1]
+
+	mqtt_client.publish(f"authome/user/{bytes_to_guid(user_id)}/image", image_buffer)
+	mqtt_client.publish(f"authome/user/{bytes_to_guid(user_id)}/characteristics", char_buffer)
+	mqtt_client.publish(f"authome/user/{bytes_to_guid(user_id)}/index", str(position))
+	log("INF", "FING", "Registrazione di " + bytes_to_guid(user_id) + " completata.")
 	
 #==========Main==========
 def main():
@@ -212,6 +226,11 @@ def main():
 	timer_sensor_data.init(period=5*1000, callback=publish_sensor_data)
 	#Normal behaviour
 	rgb_led.set_color(rgbled.RGBLed.Green);
+	CMND_REGISTER_FINGERPRINT = 0x01
+	
+	GUID_JULIEN = b'\x10\x0E\xBB\xB6\x45\xF9\x4C\x09\x9F\x0B\x99\x22\x3B\xB7\xAD\x37'
+	INDEX_JULIEN = 0x0000
+	current_command = (CMND_REGISTER_FINGERPRINT, GUID_JULIEN, INDEX_JULIEN)
 	while (True):
 		#controllare il comando
 		if (current_command == None):
@@ -219,7 +238,16 @@ def main():
 			pass
 		if (current_command != None):
 			#check id comando
-			pass
+			if (current_command[0] == CMND_REGISTER_FINGERPRINT):
+				#Richiesta registrazione impronta digitale.
+				#current_command[1] é il guid dell'utente da registrare
+				#current_command[2] é l'indice della memoria del modulo in cui salvare il file di caratteristiche.
+				log("INF", "CMND", "Richiesta la registrazione dell'utente con GUID: " + bytes_to_guid(current_command[1]) + " in posizione " + str(current_command[2]) + ".")
+				register_user(current_command[1], current_command[2])
+			else:
+				log("INF", "CMND", "Nessun comando con istruzione " + current_command[0] + " conosciuto.")
+				current_command = None
+			
 
 
 if __name__ == "__main__":

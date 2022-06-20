@@ -1,5 +1,6 @@
 ﻿@page "/users"
 @using Data
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>Users</PageTitle>
 
@@ -19,7 +20,8 @@
     protected override Task OnInitializedAsync()
     {
         ctx = new AuthomeContext();
-        users = ctx.Users.ToList();
+        users = ctx.Users
+            .Include(u => u.FingerImage).ToList();
         return Task.CompletedTask;
     }
 }
