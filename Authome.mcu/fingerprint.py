@@ -3,13 +3,6 @@ from micropython import const
 import time
 
 __ACK_OK = const(0x00)
-__ACK_RECEPTION_ERROR = const(0x01)
-__ACK_NO_FINGER = const(0x02)
-__ACK_REGISTRATION_ERROR = const(0x03)
-__ACK_IMAGE_TOO_NOISY = const(0x06)
-__ACK_NOT_ENOUGH_CHAR = const(0x07)
-__ACK_NOT_FOUND = const(0x09)
-__ACK_NO_OTHER_PACKETS = const(0x0E)
 
 __OPCODE_GENIMG = const(0x01)
 __OPCODE_IMG2TZ = const(0x02)
@@ -21,25 +14,12 @@ __OPCODE_LOADCHAR = const(0x07)
 __OPCODE_UPCHAR = const(0x08)
 __OPCODE_DOWNCHAR = const(0x09)
 __OPCODE_UPIMAGE = const(0x0A)
-__OPCODE_EMPTY = const(0x0D)
-__OPCODE_SETSYSPARA = const(0x0E)
 __OPCODE_READSYSPARA = const(0x0F)
-__OPCODE_SETPWD = const(0x12)
-__OPCODE_VFYPWD= const(0x13)
-__OPCODE_GETRANDOMCODE = const(0x14)
-__OPCODE_SETADDER = const(0x15)
-__OPCODE_TEMPLATENUM = const(0x1D)
-__OPCODE_READCONLIST = const(0x1F)
 
 __PACKET_ID_COMMAND = const(0x01)
-__PACKET_ID_DATA = const(0x02)
-__PACKET_ID_RESPONSE = const(0x07)
 __PACKET_ID_ENDDATA = const(0x08)
 
 __PACKET_HEADER = b'\xEF\x01'
-
-__IMAGE_WIDTH = const(256)
-__IMAGE_HEIGHT = const(288)
 
 class FingerprintSensor:
 	"""
@@ -48,7 +28,7 @@ class FingerprintSensor:
 	"""
 
 	__address = 0xFFFFFFFF
-	__password = 0x00000000
+	#__password = 0x00000000
 	__packet_size = 128
 
 	__packet_head_buffer = bytearray(9)
@@ -56,8 +36,7 @@ class FingerprintSensor:
 
 
 	__image_buffer = bytearray(0x9000)
-	__char_buffer_1 = bytearray(0x600)
-	__char_buffer_2 = bytearray(0x600)
+	__char_buffer = bytearray(0x600)
 
 
 	def __init__(self, tx: int, rx: int) -> None:
@@ -76,8 +55,6 @@ class FingerprintSensor:
 		if (result[0] == __ACK_OK):
 			self.__packet_size = 2**(5 + int.from_bytes(result[1][12:14], 'big'))
 		self.__packet_body_buffer = bytearray(self.__packet_size)
-
-
 
 
 	#Instruction 0x01
@@ -130,14 +107,6 @@ class FingerprintSensor:
 			return (response_ack, [])
 
 
-	#Instruction 0x05
-	def regModel(self) -> int:
-		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, [__OPCODE_REGMODEL])
-		self.__channel.write(instruction_packet)
-		response_packet = self.__channel.read(12)
-		return response_packet[9]
-
-
 	#Instruction 0x06
 	def store(self, buffer_id: int, page_id) -> int:
 		if(buffer_id != 0x01):
@@ -145,19 +114,6 @@ class FingerprintSensor:
 		content = [__OPCODE_STORE, buffer_id]
 		content.append((page_id & 0xFF00) >> 8)
 		content.append((page_id & 0x00FF) >> 0)
-		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
-		self.__channel.write(instruction_packet)
-		response_packet = self.__channel.read(12)
-		return response_packet[9]
-
-
-	#Instruction 0x07
-	def loadChar(self, bufferID: int, pageID: int) -> int:
-		if(buffer_id != 0x01):
-			buffer_id = 0X02
-		content = [__OPCODE_LOADCHAR, bufferID]
-		content.append((pageID & 0xFF00) >> 8)
-		content.append((pageID & 0x00FF) >> 0)
 		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
 		self.__channel.write(instruction_packet)
 		response_packet = self.__channel.read(12)
@@ -193,37 +149,16 @@ class FingerprintSensor:
 				#Legge il contenuto del pacchetto.
 				self.__channel.readinto(self.__packet_body_buffer, self.__packet_size)
 				if (buffer_id == 0x01):
-					self.__char_buffer_1[progress:(progress+self.__packet_size)] = self.__packet_body_buffer[0:self.__packet_size]
+					self.__char_buffer[progress:(progress+self.__packet_size)] = self.__packet_body_buffer[0:self.__packet_size]
 				if (buffer_id == 0x02):
 					self.__char_buffer_2[progress:(progress+self.__packet_size)] = self.__packet_body_buffer[0:self.__packet_size]
 				progress+=self.__packet_size
 				#Legge i due byte di checksum.
 				self.__channel.read(2)
 			if (buffer_id == 0x01):
-				return (response_ack, self.__char_buffer_1)
+				return (response_ack, self.__char_buffer)
 			if (buffer_id == 0x02):
-				return (response_ack, self.__char_buffer_1)
-		else:
-			return (response_ack, [])
-
-
-	#Instruction 0x09
-	def download_char(self, buffer_id: int) -> tuple[int, int]: #Da rivedere nel caso viene usato
-		content = [__OPCODE_DOWNCHAR, buffer_id]
-		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
-		self.__channel.write(instruction_packet)
-		response_packet = self.__channel.read(12)
-		response_ack = response_packet(9)
-
-		if(response_ack == __ACK_OK):
-			characteristic: bytes = []
-			end: bool = False
-			while(not end):
-				data_packet = self.__channel.read(12)
-				if(data_packet[9] == __PACKET_ID_ENDDATA):
-					end = True
-				characteristic += (data_packet["data"])
-			return (response_ack, characteristic)
+				return (response_ack, self.__char_buffer)
 		else:
 			return (response_ack, [])
 
