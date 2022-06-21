@@ -37,9 +37,9 @@ mqtt_client = mqtt.MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER_HOSTNAME, MQTT_BROKER_
 led_rgb = rgbled.RGBLed(RGB_LED_R, RGB_LED_G, RGB_LED_B)
 fingerprint_sensor = fingerprint.FingerprintSensor(rx=FINGER_RX, tx=FINGER_TX)
 lock = relay.Lock(RELAY_0)
-relay_1 = relay.Relay(RELAY_1, 0)
-relay_2 = relay.Relay(RELAY_2, 0)
-relay_3 = relay.Relay(RELAY_3, 0)
+relay_1 = relay.Relay(RELAY_1, 1)
+relay_2 = relay.Relay(RELAY_2, 1)
+relay_3 = relay.Relay(RELAY_3, 1)
 current_command = None
 
 #==========Utils==========
@@ -126,6 +126,7 @@ def register_user(user_id: bytes, position):
 	result = 0;
 	result_data = None
 	log("INF", "FING", "Registrazione utente iniziata, appoggiare l'impronta sul modulo.")
+	led_rgb.set_color(rgbled.RGBLed.Magenta)
 	while (True):
 		result = fingerprint_sensor.generate_image();
 		if (result == 0):
@@ -157,27 +158,57 @@ def register_user(user_id: bytes, position):
 	mqtt_client.publish(f"authome/user/{bytes_to_guid(user_id)}/characteristics", char_buffer)
 	mqtt_client.publish(f"authome/user/{bytes_to_guid(user_id)}/index", str(position))
 	log("INF", "FING", "Registrazione di " + bytes_to_guid(user_id) + " completata.")
+	led_rgb.set_color(rgbled.RGBLed.Green)
 
 def check_finger():
+	led_rgb.set_color(rgbled.RGBLed.Magenta)
 	result = fingerprint_sensor.generate_image()
 	if (result != 0x00):
 		return
-	log("INFO", "FING", "Impronta rilevata, genero le caratteristiche.")
+	log("INF", "FING", "Impronta rilevata, genero le caratteristiche.")
 	while (True):
 		result = fingerprint_sensor.image_2_tz(0x01)
 		if (result == 0x00):
 			break
-	log("INFO", "FING", "Caratteristiche generate, cerco eventuali match.")
+	log("INF", "FING", "Caratteristiche generate, cerco eventuali match.")
 	while (True):
-		result = fingerprint_sensor.search(0x01, 0, 4)
+		result = fingerprint_sensor.search(0x01)
 		if (result[0] == 0x09):
 			#Impronta non trovata
+			log("INF", "FING", "Nessuna impronta corrispondente trovata.")
+			led_rgb.set_color(rgbled.RGBLed.Red)
+			time.sleep_ms(1500)
 			return
 		if (result[0] == 0x00):
 			#Impronta trovata
+			log("INF", "FING", "Trovata una impronta corrispondente, indice: " + str(result[1]))
+			led_rgb.set_color(rgbled.RGBLed.Green)
+			log("INF", "FING", "Apro la serratura per 15 secondi")
+			mqtt_client.publish("authome/access", str(result[1]))
+			lock.timed_unlock(0, 15000)
 			break
-	#TODO: Finire l'implementazione
 	
+
+
+def subscribe_callback(topic, msg):
+	log("INF", "MQTT", "Ricevuto un messaggio sul topic " + str(topic) + " : " + str(msg))
+	if (topic == b'authome/relay/1'):
+		if (msg == b'0'):
+			relay_1.closeNC()
+		if (msg == b'1'):
+			relay_1.closeNO()
+
+	if (topic == b'authome/relay/2'):
+		if (msg == b'0'):
+			relay_2.closeNC()
+		if (msg == b'1'):
+			relay_2.closeNO()
+
+	if (topic == b'authome/relay/3'):
+		if (msg == b'0'):
+			relay_3.closeNC()
+		if (msg == b'1'):
+			relay_3.closeNO()
 
 
 #==========Main==========
@@ -185,15 +216,17 @@ def main():
 	led_rgb.set_color(rgbled.RGBLed.Yellow);
 	connect_network()
 	connect_to_broker()
+	mqtt_client.set_callback(subscribe_callback)
+	mqtt_client.subscribe("authome/relay/1")
+	mqtt_client.subscribe("authome/relay/2")
+	mqtt_client.subscribe("authome/relay/3")
 	timer_sensor_data = machine.Timer(0)
 	timer_sensor_data.init(period=5*1000, callback=publish_sensor_data)
 	#Normal behaviour
 	led_rgb.set_color(rgbled.RGBLed.Green);
-	CMND_REGISTER_FINGERPRINT = 0x01
 	
-	GUID_JULIEN = b'\x10\x0E\xBB\xB6\x45\xF9\x4C\x09\x9F\x0B\x99\x22\x3B\xB7\xAD\x37'
-	INDEX_JULIEN = 0x0000
-	current_command = (CMND_REGISTER_FINGERPRINT, GUID_JULIEN, INDEX_JULIEN)
+	#current_command = (0x01, b'\x04\x41\xED\x02\x42\x63\x4B\x51\x81\x2C\x92\x67\xE9\x1A\xE6\xDB', 0x0001)
+	current_command = None
 	while (True):
 		#controllare il comando
 		if (current_command == None):
@@ -202,7 +235,7 @@ def main():
 			check_finger()
 		if (current_command != None):
 			#check id comando
-			if (current_command[0] == CMND_REGISTER_FINGERPRINT):
+			if (current_command[0] == 0x01):
 				#Richiesta registrazione impronta digitale.
 				log("INF", "CMND", "Richiesta la registrazione dell'utente con GUID: " + bytes_to_guid(current_command[1]) + " in posizione " + str(current_command[2]) + ".")
 				register_user(current_command[1], current_command[2])
@@ -210,7 +243,7 @@ def main():
 			else:
 				log("INF", "CMND", "Nessun comando con istruzione " + current_command[0] + " conosciuto.")
 				current_command = None
-			
+		mqtt_client.check_msg()
 
 
 if __name__ == "__main__":

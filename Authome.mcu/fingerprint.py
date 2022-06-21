@@ -29,6 +29,7 @@ class FingerprintSensor:
 
 	__address = 0xFFFFFFFF
 	#__password = 0x00000000
+	__lib_size = 150
 	__packet_size = 128
 
 	__packet_head_buffer = bytearray(9)
@@ -53,6 +54,7 @@ class FingerprintSensor:
 		time.sleep_ms(500)
 		result = self.read_system_parameters()
 		if (result[0] == __ACK_OK):
+			self.__lib_size = int.from_bytes(result[1][4:6], 'big')
 			self.__packet_size = 2**(5 + int.from_bytes(result[1][12:14], 'big'))
 		self.__packet_body_buffer = bytearray(self.__packet_size)
 
@@ -89,20 +91,20 @@ class FingerprintSensor:
 
 
 	#Instruction 0x04
-	def search(self, buffer_id: int, start_page: int, page_number: int) -> tuple[int, int]:
+	def search(self, buffer_id: int) -> tuple[int, int]:
 		if(buffer_id != 0x01):
 			buffer_id = 0X02
 		content = [__OPCODE_SEARCH, buffer_id]
-		content.append((start_page & 0xFF00) >> 8)
-		content.append((start_page & 0x00FF) >> 0)
-		content.append((page_number & 0xFF00) >> 8)
-		content.append((page_number & 0x00FF) >> 0)
+		content.append(0x00)
+		content.append(0x00)
+		content.append((self.__lib_size & 0xFF00) >> 8)
+		content.append((self.__lib_size & 0x00FF) >> 0)
 		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
 		self.__channel.write(instruction_packet)
 		response_packet = self.__channel.read(16)
 		response_ack = response_packet[9]
 		if(response_ack == __ACK_OK):
-			return (response_ack, int.from_bytes(response_packet[10:2], 'big')) #slice fatto male?
+			return (response_ack, int.from_bytes(response_packet[10:12], 'big'))
 		else:
 			return (response_ack, [])
 
