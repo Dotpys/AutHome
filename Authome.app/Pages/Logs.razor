@@ -1,51 +1,60 @@
 ﻿@page "/logs"
 @using AutHome.Data
+@using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
+@inject NavigationManager NavigationManager
 
 <PageTitle>Logs</PageTitle>
 
-@if (accessEntries != null)
-{
-    <div class="logs-container">
-        <AuthomeCard
-            AccentColor="#4155c3"
-            Title="Lista accessi"
-            Icon="fa-table-list">
-            <table class="log-table">
-                <tr class="log-table-header">
-                    <th>Utente</th>
-                    <th>Giorno</th>
-                    <th>Orario</th>
-                </tr>
-        
-@foreach (var accessEntry in accessEntries)
-{
-                <tr class="log-table-item">
-                    <td>@accessEntry.User.FullName</td>
-                    <td>@accessEntry.Timestamp.ToString("dd MMMM yyyy")</td>
-                    <td>@accessEntry.Timestamp.ToString("HH:m")</td>
-                </tr>
-}
-    </table>
-        </AuthomeCard>
-    </div>
-}
-else
-{
-    <p>Caricamento...</p>
-}
+<div class="logs-container">
+    <AuthomeCard
+        AccentColor="#4155c3"
+        Title="Lista accessi"
+        Icon="fa-table-list">
+        <table class="log-table">
+            <tr class="log-table-header">
+                <th>Utente</th>
+                <th>Giorno</th>
+                <th>Orario</th>
+            </tr>
+            @foreach (var accessEntry in accessEntries)
+            {
+            <tr class="log-table-item">
+                <td>@accessEntry.User!.FullName</td>
+                <td>@accessEntry.Timestamp.ToString("dd MMMM yyyy")</td>
+                <td>@accessEntry.Timestamp.ToString("HH:mm")</td>
+            </tr>
+            }
+        </table>
+    </AuthomeCard>
+</div>
+
 
 @code {
-    IEnumerable<AccessEntry>? accessEntries;
-    AuthomeContext ctx = null!;
+    IList<AccessEntry> accessEntries = null!;
+    private HubConnection? hubConnection;
 
     protected override Task OnInitializedAsync()
     {
-        ctx = new AuthomeContext();
+        UpdateList();
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hub/accesslist"))
+            .Build();
+        hubConnection.On("Update", () => 
+        {
+            UpdateList();
+            StateHasChanged();
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private void UpdateList()
+    {
+        using (AuthomeContext ctx = new AuthomeContext())
         accessEntries = ctx.AccessEntries
             .Include(entry => entry.User)
             .OrderByDescending(entry => entry.Timestamp)
             .ToList();
-        return Task.CompletedTask;
     }
 }

@@ -47,6 +47,7 @@ app.UseRouting();
 app.MapBlazorHub();
 app.MapHub<DashboardHub>("/hub/dashboard");
 app.MapHub<UsersHub>("/hub/users");
+app.MapHub<UsersHub>("/hub/accesslist");
 app.MapFallbackToPage("/_Host");
 
 app.Run();

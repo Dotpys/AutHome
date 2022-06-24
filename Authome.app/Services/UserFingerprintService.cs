@@ -39,6 +39,31 @@ public class UserFingerprintService
 			});
 	}
 
+	public void SendUserDeletionCommand(User user)
+	{
+		if (user != null && user.ImageIndex != null)
+		{
+			byte[] payloadBuffer = new byte[] { 0x02, (byte)(user.ImageIndex >> 8), (byte)(user.ImageIndex & 0x00FF) };
+			MQTTConnectionService.MqttClient.PublishAsync(
+				new MQTTnet.MqttApplicationMessage()
+				{
+					Topic = "authome/mcu/command",
+					Payload = payloadBuffer
+				});
+		}
+	}
+
+	public void DeleteCharacteristicAt(ushort index)
+	{
+		byte[] payloadBuffer = new byte[] { 0x02, (byte)(index >> 8), (byte)(index & 0x00FF) };
+		MQTTConnectionService.MqttClient.PublishAsync(
+			new MQTTnet.MqttApplicationMessage()
+			{
+				Topic = "authome/mcu/command",
+				Payload = payloadBuffer
+			});
+	}
+
 	private bool TryFindNextFreeIndex(out ushort index)
 	{
 		var registeredUsers = _authomeContext.Users.Where(u => u.ImageIndex != null);

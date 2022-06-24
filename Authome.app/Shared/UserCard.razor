@@ -76,6 +76,7 @@
 		u.FingerImage = null;
 		u.CharacteristicsData = null;
 		u.ImageIndex = null;
+		userFingerprintService.SendUserDeletionCommand(User);
 		ctx.SaveChanges();
 		User = u;
 	}
@@ -83,6 +84,7 @@
 	private void DeleteUser()
 	{
 		ctx.Users.Remove(User);
+		userFingerprintService.SendUserDeletionCommand(User);
 		ctx.SaveChanges();
 		navigationManager.NavigateTo("/users");
 	}

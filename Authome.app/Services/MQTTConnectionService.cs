@@ -15,6 +15,7 @@ public class MQTTConnectionService : IHostedService, IDisposable
 	private readonly ILogger<MQTTConnectionService> _logger;
 	private readonly IHubContext<DashboardHub> _hubDashboard;
 	private readonly IHubContext<UsersHub> _hubUsers;
+	private readonly IHubContext<AccessListHub> _hubAccessList;
 	private readonly FingerprintImageStore _imageStore;
 
 	private readonly MqttFactory _mqttFactory;
@@ -39,12 +40,14 @@ public class MQTTConnectionService : IHostedService, IDisposable
 		ILogger<MQTTConnectionService> logger,
 		IHubContext<DashboardHub> hubDashboard,
 		IHubContext<UsersHub> hubUsers,
+		IHubContext<AccessListHub> hubAccessList,
 		FingerprintImageStore imageStore)
 	{
 		_configuration = mqttConfiguration;
 		_logger = logger;
 		_hubDashboard = hubDashboard;
 		_hubUsers = hubUsers;
+		_hubAccessList = hubAccessList;
 		_imageStore = imageStore;
 		_userPropertyPattern = new(@"authome\/user\/(?<userId>[0-9A-F]{32})\/(?<property>(image|characteristics|index))");
 
@@ -128,6 +131,7 @@ public class MQTTConnectionService : IHostedService, IDisposable
 							User = u
 						});
 					ctx.SaveChanges();
+					await _hubAccessList.Clients.All.SendAsync("Update");
 				}
 				break;
 			default:

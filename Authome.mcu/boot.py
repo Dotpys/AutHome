@@ -216,10 +216,21 @@ def subscribe_callback(topic, msg):
 		if (msg[0] == 0x01):
 			#Nuovo register user command
 			current_command = (0x01, msg[1:17], int.from_bytes(msg[17:19], 'big'))
+		if (msg[0] == 0x02):
+			#Nuovo delete fingerprint command
+			current_command = (0x02, msg[1:3])
 
 
 def check_messages(callback_params):
 	mqtt_client.check_msg()
+
+
+def delete_fingerprint(position: bytes):
+	result = fingerprint_sensor.delete_characteristic(position)
+	if (result == 0x00):
+		log("INF", "FING", "Cancellazione impronta effettuata.")
+	if (result != 0x00):
+		log("INF", "FING", "Errore nella cancellazione dell'impronta.")
 
 #==========Main==========
 def main():
@@ -241,7 +252,7 @@ def main():
 	timer_message.init(period=20, callback=check_messages)
 	#Normal behaviour
 	led_rgb.set_color(rgbled.RGBLed.Green);
-	
+
 	while (True):
 		#controllare il comando
 		if (current_command == None):
@@ -254,6 +265,11 @@ def main():
 				#Richiesta registrazione impronta digitale.
 				log("INF", "CMND", "Richiesta la registrazione dell'utente con GUID: " + bytes_to_guid(current_command[1]) + " in posizione " + str(current_command[2]) + ".")
 				register_user(current_command[1], current_command[2])
+				current_command = None
+			elif (current_command[0] == 0x02):
+				#Richiesta cancellazione impronta digitale.
+				log("INF", "CMND", "Richiesta la cancellazione dell'impronta con indice: " + bytes_to_guid(current_command[1]) + ".")
+				delete_fingerprint(current_command[1])
 				current_command = None
 			else:
 				log("INF", "CMND", "Nessun comando con istruzione " + current_command[0] + " conosciuto.")

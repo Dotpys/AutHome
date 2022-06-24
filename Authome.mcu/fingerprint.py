@@ -8,12 +8,10 @@ __OPCODE_GENIMG = const(0x01)
 __OPCODE_IMG2TZ = const(0x02)
 __OPCODE_MATCH = const(0x03)
 __OPCODE_SEARCH = const(0x04)
-__OPCODE_REGMODEL = const(0x05)
 __OPCODE_STORE = const(0x06)
-__OPCODE_LOADCHAR = const(0x07)
 __OPCODE_UPCHAR = const(0x08)
-__OPCODE_DOWNCHAR = const(0x09)
 __OPCODE_UPIMAGE = const(0x0A)
+__OPCODE_DELETECHAR = const(0x0C)
 __OPCODE_READSYSPARA = const(0x0F)
 
 __PACKET_ID_COMMAND = const(0x01)
@@ -197,6 +195,21 @@ class FingerprintSensor:
 			return (response_ack, self.__image_buffer)
 		else:
 			return (response_ack, [])
+
+
+	#Instruction 0x0C
+	def delete_characteristic(self, pageId: bytes) -> int:
+		#Genera il pacchetto
+		content = [__OPCODE_DELETECHAR]
+		content.append(pageId[0])
+		content.append(pageId[1])
+		content.append(0x00)
+		content.append(0x01)
+		instruction_packet = self.__generate_packet(__PACKET_ID_COMMAND, content)
+		#Invia il pacchetto
+		self.__channel.write(instruction_packet)
+		response_packet = self.__channel.read(12)
+		return response_packet[9]
 
 
 	#Instruction 0x0F
