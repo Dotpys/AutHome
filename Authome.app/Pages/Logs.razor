@@ -1,26 +1,51 @@
 ﻿@page "/logs"
 @using AutHome.Data
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>Logs</PageTitle>
 
 @if (accessEntries != null)
 {
-        @foreach (var accessEntry in accessEntries)
-        {
-            <p class="h3">@GetAccessText(accessEntry)</p>
-        }
+    <div class="logs-container">
+        <AuthomeCard
+            AccentColor="#4155c3"
+            Title="Lista accessi"
+            Icon="fa-table-list">
+            <table class="log-table">
+                <tr class="log-table-header">
+                    <th>Utente</th>
+                    <th>Giorno</th>
+                    <th>Orario</th>
+                </tr>
+        
+@foreach (var accessEntry in accessEntries)
+{
+                <tr class="log-table-item">
+                    <td>@accessEntry.User.FullName</td>
+                    <td>@accessEntry.Timestamp.ToString("dd MMMM yyyy")</td>
+                    <td>@accessEntry.Timestamp.ToString("HH:m")</td>
+                </tr>
+}
+    </table>
+        </AuthomeCard>
+    </div>
+}
+else
+{
+    <p>Caricamento...</p>
 }
 
 @code {
     IEnumerable<AccessEntry>? accessEntries;
-    AuthomeContext ctx;
+    AuthomeContext ctx = null!;
 
     protected override Task OnInitializedAsync()
     {
         ctx = new AuthomeContext();
-        accessEntries = ctx.AccessEntries.OrderBy(entry => entry.Timestamp).ToList();
+        accessEntries = ctx.AccessEntries
+            .Include(entry => entry.User)
+            .OrderByDescending(entry => entry.Timestamp)
+            .ToList();
         return Task.CompletedTask;
     }
-
-    private string GetAccessText(AccessEntry accessEntry) => $"{accessEntry.User.FirstName} {accessEntry.User.LastName} accessed at {accessEntry.Timestamp}";
 }

@@ -1,5 +1,7 @@
-<AuthomeCard Icon="fa-temperature-half" Title=@DeviceName AccentColor=@AccentColor>
-	<p class="h1">@OutputContent</p>
+<AuthomeCard Icon="fa-temperature-half" Title=@DeviceName AccentColor=@OutputAccentColor>
+	<div class="text-center m-2">
+        <p class="h1">@OutputContent</p>
+    </div>
 </AuthomeCard>
 
 @code {
@@ -17,6 +19,8 @@
 
     [Parameter]
     public double? InputTemperature { get; set; }
+
+    public string OutputAccentColor => (InputTemperature == null) ? "#F01E02" : AccentColor;
 
     private double OutputTemperature
     {
@@ -42,7 +46,7 @@
     {
         get
         {
-            if (InputTemperature == null) return "No data available.";
+            if (InputTemperature == null) return "-";
             if (OutputScale == TemperatureScale.Celsius) return $"{OutputTemperature:F2} °C";
             if (OutputScale == TemperatureScale.Fahrenheit) return $"{OutputTemperature:F2} °F";
             return $"{OutputTemperature:F1} °K";

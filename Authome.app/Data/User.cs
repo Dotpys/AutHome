@@ -9,4 +9,6 @@ public class User
 	public byte[]? CharacteristicsData { get; set; }
 	public FingerImage? FingerImage { get; set; }
 	public ushort? ImageIndex { get; set; }
+
+	public string FullName => $"{FirstName} {LastName}";
 }

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.SignalR;
 using AutHome.Hubs;
 using MQTTnet;
 using MQTTnet.Client;
-using MQTTnet.Exceptions;
 using System.Text.RegularExpressions;
 using AutHome.Data;
 using System.Text;
@@ -14,28 +13,47 @@ public class MQTTConnectionService : IHostedService, IDisposable
 {
 	private readonly IConfiguration _configuration;
 	private readonly ILogger<MQTTConnectionService> _logger;
-	private readonly IHubContext<ControlHub> _hub;
+	private readonly IHubContext<DashboardHub> _hubDashboard;
+	private readonly IHubContext<UsersHub> _hubUsers;
 	private readonly FingerprintImageStore _imageStore;
 
 	private readonly MqttFactory _mqttFactory;
-	private readonly IMqttClient _mqttClient;
-	private readonly MqttClientOptions _mqttClientOptions;
-	Regex reg = new(@"authome\/user\/(?<userId>[0-9A-F]{32})\/(?<property>(image|characteristics|index))");
+	private static IMqttClient _mqttClient = null!;
+	private static MqttClientOptions _mqttClientOptions = null!;
+	private readonly Regex _userPropertyPattern;
 
-	public bool IsConnected { get => _mqttClient.IsConnected; }
+	public static IMqttClient MqttClient { get => _mqttClient; }
+
+	public static bool IsConnected { get => _mqttClient.IsConnected; }
+
+	public static string MCUStatus { get; set; } = string.Empty;
+	public static int? MCUTemperature { get; set; } = null;
+	public static int? DHTTemperature { get; set; } = null;
+	public static int? DHTHumidity { get; set; } = null;
+	public static bool? Relay1State { get; set; } = null;
+	public static bool? Relay2State { get; set; } = null;
+	public static bool? Relay3State { get; set; } = null;
 
 	public MQTTConnectionService(
 		IConfiguration mqttConfiguration,
 		ILogger<MQTTConnectionService> logger,
-		IHubContext<ControlHub> hub,
+		IHubContext<DashboardHub> hubDashboard,
+		IHubContext<UsersHub> hubUsers,
 		FingerprintImageStore imageStore)
 	{
 		_configuration = mqttConfiguration;
 		_logger = logger;
-		_hub = hub;
+		_hubDashboard = hubDashboard;
+		_hubUsers = hubUsers;
 		_imageStore = imageStore;
+		_userPropertyPattern = new(@"authome\/user\/(?<userId>[0-9A-F]{32})\/(?<property>(image|characteristics|index))");
 
 		_mqttFactory = new();
+		
+	}
+
+	public async Task StartAsync(CancellationToken cancellationToken)
+	{
 		_mqttClient = _mqttFactory.CreateMqttClient();
 		string host = _configuration.GetValue("MQTT:Broker:Address", "localhost");
 		int port = _configuration.GetValue("MQTT:Broker:Port", 1883);
@@ -43,13 +61,9 @@ public class MQTTConnectionService : IHostedService, IDisposable
 			.WithTcpServer(host, port)
 			.WithClientId(_configuration.GetValue("MQTT:ClientId", "Backend-Client"))
 			.Build();
-	}
-
-	public async Task StartAsync(CancellationToken cancellationToken)
-	{
 		MqttClientConnectResult connectionResult = await _mqttClient.ConnectAsync(_mqttClientOptions, cancellationToken);
 		_logger.LogInformation("Connected to MQTT broker.");
-		await _mqttClient.SubscribeAsync("authome/#");
+		await _mqttClient.SubscribeAsync("authome/#", cancellationToken: cancellationToken);
 		_mqttClient.ApplicationMessageReceivedAsync += MessageReceived;
 	}
 
@@ -61,31 +75,67 @@ public class MQTTConnectionService : IHostedService, IDisposable
 
 	public void Dispose()
 	{
-		_mqttClient!.Dispose();
+		GC.SuppressFinalize(this);
 	}
 
 	private async Task MessageReceived(MqttApplicationMessageReceivedEventArgs eventArgs)
 	{
 		switch (eventArgs.ApplicationMessage.Topic)
 		{
+			case "authome/mcu/status":
+				MCUStatus = eventArgs.ApplicationMessage.ConvertPayloadToString();
+				await _hubDashboard.Clients.All.SendAsync("MCUStatus", MCUStatus);
+				break;
 			case "authome/mcu/temperature":
-				await _hub.Clients.All.SendAsync("MicrocontrollerTemperature", int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString()));
+				MCUTemperature = int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString());
+				await _hubDashboard.Clients.All.SendAsync("MCUTemperature", MCUTemperature);
 				break;
 			case "authome/dht/temperature":
-				await _hub.Clients.All.SendAsync("Temperature", int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString()));
+				DHTTemperature = int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString());
+				await _hubDashboard.Clients.All.SendAsync("DHTTemperature", DHTTemperature);
 				break;
 			case "authome/dht/humidity":
-				await _hub.Clients.All.SendAsync("Humidity", int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString()));
+				DHTHumidity = int.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString());
+				await _hubDashboard.Clients.All.SendAsync("DHTHumidity", DHTHumidity);
 				break;
+			case "authome/relay/1":
+				Relay1State = eventArgs.ApplicationMessage.Payload[0] == 0x01;
+				await _hubDashboard.Clients.All.SendAsync("Relay1State", Relay1State);
+				break;
+			case "authome/relay/2":
+				Relay2State = eventArgs.ApplicationMessage.Payload[0] == 0x01;
+				await _hubDashboard.Clients.All.SendAsync("Relay2State", Relay2State);
+				break;
+			case "authome/relay/3":
+				Relay3State = eventArgs.ApplicationMessage.Payload[0] == 0x01;
+				await _hubDashboard.Clients.All.SendAsync("Relay3State", Relay3State);
+				break;
+
+
 			case "authome/fingerprint/data":
 				_imageStore.TryEncodeAndSaveAsImage(eventArgs.ApplicationMessage.Payload, out _);
+				break;
+			case "authome/access":
+				ushort index = ushort.Parse(eventArgs.ApplicationMessage.ConvertPayloadToString());
+				using (AuthomeContext ctx = new())
+				{
+					User u = ctx.Users.Single(u => u.ImageIndex == index);
+					ctx.AccessEntries.Add(
+						new AccessEntry()
+						{
+							Id = Guid.NewGuid(),
+							Timestamp = DateTime.UtcNow,
+							User = u
+						});
+					ctx.SaveChanges();
+				}
 				break;
 			default:
 				break;
 		}
 		
 
-		Match match = reg.Match(eventArgs.ApplicationMessage.Topic);
+		Match match = _userPropertyPattern.Match(eventArgs.ApplicationMessage.Topic);
 		if (match.Success)
 		{
 			Guid userId = new(match.Groups["userId"].Value);
@@ -111,6 +161,7 @@ public class MQTTConnectionService : IHostedService, IDisposable
 				case "index":
 					u.ImageIndex = ushort.Parse(Encoding.UTF8.GetString(eventArgs.ApplicationMessage.Payload));
 					ctx.SaveChanges();
+					await _hubUsers.Clients.All.SendAsync("Update");
 					break;
 			}
 		}

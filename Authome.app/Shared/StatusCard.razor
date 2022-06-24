@@ -1,0 +1,20 @@
+﻿<AuthomeCard Icon="fa-link" Title=@DeviceName AccentColor=@OutputAccentColor>
+	<div class="text-center m-2">
+        <p class="h1">@OutputContent</p>
+    </div>
+</AuthomeCard>
+
+@code {
+    [Parameter]
+    public string DeviceName { get; set; } = "Device";
+
+    [Parameter]
+    public string Status { get; set; } = "Offline";
+
+    public string OutputAccentColor => (Status != "Offline") ? "#58BD49" : "#F01E02";
+
+    private string OutputContent
+    {
+        get => Status;
+    }
+}

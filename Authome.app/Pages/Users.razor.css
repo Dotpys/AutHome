@@ -1,4 +1,12 @@
-.card-container {
+﻿.container
+{
+	padding: 1rem;
+	display: grid;
+	gap: 1rem;
+}
+
+.users-container
+{
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
@@ -6,9 +14,10 @@
 	align-items: stretch;
 	align-content: flex-start;
 	gap: 1rem;
-	margin: 1rem;
 }
 
-.card-item {
-	flex: 1 0 300px;
+.list-item
+{
+	flex: 1 0 16rem;
+	max-width: 320px;
 }

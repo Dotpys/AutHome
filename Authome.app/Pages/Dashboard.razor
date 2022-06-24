@@ -5,56 +5,112 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<TemperatureCard
-    DeviceName="Temperatura MCU"
-    AccentColor="#de922f"
-    InputScale=@TemperatureCard.TemperatureScale.Fahrenheit
-    OutputScale=@TemperatureCard.TemperatureScale.Celsius
-    InputTemperature=@mcuTemperature/>
+<div class="card-container">
+    <StatusCard
+        DeviceName="Stato MCU"
+        Status=@mcuStatus/>
 
-<TemperatureCard
-    DeviceName="Temperatura DHT"
-    AccentColor="#00aa00"
-    InputScale=@TemperatureCard.TemperatureScale.Celsius
-    OutputScale=@TemperatureCard.TemperatureScale.Celsius
-    InputTemperature=@dhtTemperature/>
+    <TemperatureCard
+        DeviceName="Temperatura MCU"
+        AccentColor="#F08650"
+        InputScale=@TemperatureCard.TemperatureScale.Fahrenheit
+        OutputScale=@TemperatureCard.TemperatureScale.Celsius
+        InputTemperature=@mcuTemperature/>
 
-<HumidityCard
-    DeviceName="Umiditá DHT"
-    AccentColor="#00aa00"
-    InputHumidity=@dhtHumidity/>
+    <TemperatureCard
+        DeviceName="Temperatura DHT"
+        AccentColor="#F08650"
+        InputScale=@TemperatureCard.TemperatureScale.Celsius
+        OutputScale=@TemperatureCard.TemperatureScale.Celsius
+        InputTemperature=@dhtTemperature/>
+
+    <HumidityCard
+        DeviceName="Umiditá DHT"
+        AccentColor="#F08650"
+        InputHumidity=@dhtHumidity/>
+
+    <SwitchCard
+        AccentColor="#A349A4"
+        DeviceName="Relay 1"
+        State=@relay1State
+        Topic="authome/relay/1"/>
+
+    <SwitchCard
+        AccentColor="#A349A4"
+        DeviceName="Relay 2"
+        State=@relay2State
+        Topic="authome/relay/2"/>
+
+    <SwitchCard
+        AccentColor="#A349A4"
+        DeviceName="Relay 3"
+        State=@relay3State
+        Topic="authome/relay/3"/>
+</div>
+
 
 @code {
+    private string mcuStatus = "Offline";
     private int? mcuTemperature = null;
     private int? dhtTemperature = null;
     private int? dhtHumidity = null;
+    private bool? relay1State = null;
+    private bool? relay2State = null;
+    private bool? relay3State = null;
 
     private HubConnection? hubConnection;
 
     protected override async Task OnInitializedAsync()
     {
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/controlhub"))
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hub/dashboard"))
             .Build();
 
-        hubConnection.On<int>("MicrocontrollerTemperature", (temperature) =>
+
+        hubConnection.On<string>("MCUStatus", (status) =>
+        {
+            mcuStatus = status;
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<int>("MCUTemperature", (temperature) =>
         {
             mcuTemperature = temperature;
             InvokeAsync(StateHasChanged);
         });
 
-        hubConnection.On<int>("Temperature", (temperature) => 
+        hubConnection.On<int>("DHTTemperature", (temperature) => 
         {
             dhtTemperature = temperature;
             InvokeAsync(StateHasChanged);
         });
 
-        hubConnection.On<int>("Humidity", (humidity) => 
+        hubConnection.On<int>("DHTHumidity", (humidity) => 
         {
             dhtHumidity = humidity;
             InvokeAsync(StateHasChanged);
         });
 
+        hubConnection.On<bool>("Relay1State", (state) => 
+        {
+            relay1State = state;
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<bool>("Relay2State", (state) => 
+        {
+            relay2State = state;
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<bool>("Relay3State", (state) => 
+        {
+            relay3State = state;
+            InvokeAsync(StateHasChanged);
+        });
+
         await hubConnection.StartAsync();
+
+        await hubConnection.SendAsync("GetCurrentStatus");
     }
 }

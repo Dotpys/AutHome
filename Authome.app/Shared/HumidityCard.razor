@@ -1,5 +1,7 @@
-﻿<AuthomeCard Icon="fa-droplet" Title=@DeviceName AccentColor=@AccentColor >
-	<p class="h1">@OutputContent</p>
+﻿<AuthomeCard Icon="fa-droplet" Title=@DeviceName AccentColor=@OutputAccentColor >
+    <div class="text-center m-2">
+        <p class="h1">@OutputContent</p>
+    </div>
 </AuthomeCard>
 
 @code {
@@ -12,5 +14,7 @@
     [Parameter]
     public double? InputHumidity { get; set; }
 
-    private string OutputContent => InputHumidity == null ? "No data available." : $"{InputHumidity.Value:F1} %";
+    public string OutputAccentColor => (InputHumidity == null) ? "#F01E02" : AccentColor;
+
+    private string OutputContent => InputHumidity == null ? "-" : $"{InputHumidity.Value:F1} %";
 }

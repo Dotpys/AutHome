@@ -1,0 +1,34 @@
+﻿<button
+	class="authome-button"
+	style="--accent-color: @AccentColor;"
+	onclick=@OnClick
+	type=@Type.ToString()>
+	<span class="fa-solid @Icon"></span> @Text
+</button>
+
+@code {
+	[Parameter]
+	public string AccentColor { get; set; } = "#4155c3";
+
+	[Parameter]
+	public string Icon { get; set; } = "fa-plus";
+
+	[Parameter]
+	public string Text { get; set; } = "Button";
+
+	[Parameter]
+	public string Link { get; set; } = "/";
+
+	[Parameter]
+	public Action? OnClick { get; set; }
+
+	[Parameter]
+	public ButtonType Type { get; set; } = ButtonType.Button;
+
+	public enum ButtonType
+	{
+		Button,
+		Reset,
+		Submit
+	}
+}

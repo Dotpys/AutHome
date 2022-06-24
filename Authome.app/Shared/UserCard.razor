@@ -1,23 +1,89 @@
+@using AutHome.Services
 @using Data
+@inject NavigationManager navigationManager
+@inject UserFingerprintService userFingerprintService
 
-<AuthomeCard Icon="fa-user" Title=@Title>
-	<p class="h3">@SignInInfo</p>
+<AuthomeCard Icon="fa-user" Title=@FullName>
+	<div class="user-info">
+		<p class="h5"><span class="fa-solid fa-circle-info"></span> Informazioni</p>
+		<ul>
+			<li>@SignInInfo</li>
+		</ul>
+		<p class="h5"><span class="fa-solid fa-fingerprint"></span> Impronta digitale</p>
+		<div class="fingerprint-image-container text-center align-middle">
+		@if (User.ImageIndex != null)
+		{
+			<p class="index-text">Indice impronta @User.ImageIndex</p>
+			<img src=@User.FingerImage!.Path class="fingerprint-image" alt="Immagine dell'impronta di @FullName"/>
+		}
+		else
+		{
+			<p class="no-fingerprint-text">Nessuna impronta registrata</p>
+		}
+		</div>
+	</div>
+	<div class="d-grid gap-2">
 	@if (User.ImageIndex != null)
 	{
-		<img src=@User.FingerImage.Path/>
+		<AuthomeButton
+			AccentColor="#E60D0D"
+			Icon="fa-eraser"
+			Text="Cancella impronta"
+			OnClick=@EraseFingerprint/>
 	}
 	else
 	{
-		<p class="h3">No finger image found.</p>
-		<a href="/user/@User.Id.ToString("n")/register">Register</a>
+		<AuthomeButton
+			AccentColor="#58BD49"
+			Icon="fa-hand-point-down"
+			Text="Registra impronta"
+			OnClick=@Register/>
 	}
+		<AuthomeButton
+			AccentColor="#E60D0D"
+			Icon="fa-trash"
+			Text="Cancella utente"
+			OnClick=@DeleteUser/>
+	</div>
+	
+	
 </AuthomeCard>
 
 @code {
+	private AuthomeContext ctx;
+
 	[Parameter]
 	public User User { get; set; } = null!;
 
-	private string Title => $"{User.FirstName} {User.LastName}";
+	protected override Task OnInitializedAsync()
+	{
+		ctx = new AuthomeContext();
+		return Task.CompletedTask;
+	}
 
-	private string SignInInfo => $"Signed on {User.RegistrationDate}";
+	private string FullName => $"{User.FirstName} {User.LastName}";
+
+	private string SignInInfo => $"Registrato il {User.RegistrationDate.ToString("dd MMMM yyyy")}";
+
+	private void Register()
+	{
+		userFingerprintService.SendUserRegistrationCommand(User);
+	}
+
+	private void EraseFingerprint()
+	{
+		User u = ctx.Users.Single(u => u.Id == User.Id);
+		u.FingerImage = null;
+		u.CharacteristicsData = null;
+		u.ImageIndex = null;
+		ctx.SaveChanges();
+		User = u;
+	}
+
+	private void DeleteUser()
+	{
+		ctx.Users.Remove(User);
+		ctx.SaveChanges();
+		navigationManager.NavigateTo("/users");
+	}
 }

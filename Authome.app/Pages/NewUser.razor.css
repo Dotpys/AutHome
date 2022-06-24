@@ -7,16 +7,20 @@
 	font-family: 'Josefin Sans', sans-serif;
 }
 
+.new-user-form-container {
+	padding: 1rem;
+}
+
 .container .card {
 	transition: all 0.3s;
 	background: #404A80;
 }
 
 
-	.container .card:hover {
-		transform: scale(1.05);
-		transition: 0.3s;
-	}
+.container .card:hover {
+	transform: scale(1.05);
+	transition: 0.3s;
+}
 
 .btn {
 	border: solid 3px;
@@ -63,3 +67,5 @@
 	font-weight: bold;
 	color: white;
 }
+
+

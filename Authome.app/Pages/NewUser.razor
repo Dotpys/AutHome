@@ -2,9 +2,11 @@
 @using System.ComponentModel.DataAnnotations
 @using AutHome.Data
 @using AutHome.Services
+@inject NavigationManager NavigationManager
 
 <PageTitle>New User</PageTitle>
 
+<div class="new-user-form-container">
 <AuthomeCard
 	Title="New User"
 	Icon="fa-user-plus"
@@ -12,32 +14,36 @@
 	
 	<EditForm Model="@model" OnValidSubmit="@HandleValidSubmit">
 		<DataAnnotationsValidator />
-		<ValidationSummary />
+		
 
 		<div class="box m-2">
 			<label for="firstName" class="form-label">First Name</label>
 			<InputText id="firstName" class="form-control" @bind-Value="model.FirstName"/>
 		</div>
 	
-		<div class="box m-2">
+		<div class="box m-2 mb-3">
 			<label for="lastName" class="form-label">Last Name</label>
 			<InputText id="lastName" class="form-control" @bind-Value="model.LastName"/>
 		</div>
 
-		
-		
-		<div class="box m-2">
-			<button type="submit" class="btn">Register</button>
+		<ValidationSummary />
+
+		<div class="box m-2 mt-3">
+			<AuthomeButton
+				AccentColor="#a8165d"
+				Icon="fa-plus"
+				Text="Register"
+				Type=@AuthomeButton.ButtonType.Submit/>
 		</div>
 	</EditForm>
 
 </AuthomeCard>
-
+</div>
 
 @code
 {
 	private UserModel model = new();
-	AuthomeContext ctx;
+	AuthomeContext ctx = null!;
 
 	private void HandleValidSubmit()
 	{
@@ -52,7 +58,7 @@
 				}
 		);
 		ctx.SaveChanges();
-		//Cambio interfaccia
+		NavigationManager.NavigateTo("/users");
 	}
 
 	public class UserModel

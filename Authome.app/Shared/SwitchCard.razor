@@ -1,0 +1,61 @@
+﻿@using AutHome.Services
+<AuthomeCard Icon=@OutputIconName Title=@DeviceName AccentColor=@OutputAccentColor >
+    <div class="text-center m-2">
+        @if (State != null)
+        {
+            <AuthomeButton
+                AccentColor=@ButtonAccentColor
+                Icon="fa-repeat"
+                Text="Switch"
+                OnClick=@Switch/>
+        }
+        else
+        {
+            <p class="h1">-</p>
+        }
+
+    </div>
+</AuthomeCard>
+
+@code {
+    [Parameter]
+    public string DeviceName { get; set; } = "Device";
+
+    [Parameter]
+    public string AccentColor { get; set; } = "#de922f";
+
+    [Parameter]
+    public bool? State { get; set; }
+
+    [Parameter]
+    public string? Topic { get; set; }
+
+    public string OutputIconName
+    {
+        get
+        {
+            if (State != null) return State.Value ? "fa-toggle-on" : "fa-toggle-off";
+            return "fa-toggle-off";
+        }
+    }
+
+    public string OutputAccentColor => (State == null) ? "#F01E02" : AccentColor;
+
+
+    public string ButtonAccentColor => (State == null) ? "#F01E02" : AccentColor;
+
+    private void Switch()
+    {
+        if (Topic != null && State != null)
+        {
+            MQTTConnectionService.MqttClient.PublishAsync(
+                new MQTTnet.MqttApplicationMessage()
+                    {
+                        Topic = Topic,
+                        Payload = State.Value ? new byte[] { 0x00 } : new byte[] { 0x01 },
+                        Retain = true
+                    }
+            );
+        }
+    }
+}

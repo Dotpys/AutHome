@@ -1,27 +1,65 @@
 ﻿@page "/users"
 @using Data
+@using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
+@inject NavigationManager NavigationManager
 
 <PageTitle>Users</PageTitle>
 
-@if (users != null) {
-    @foreach (var user in users) {
-        <UserCard User=user/>
+<div class="container">
+    <AuthomeButton
+        AccentColor="#58BD49"
+        Icon="fa-user-plus"
+        Text="Aggiungi persona"
+        OnClick="@NavigateToNewUserPage"/>
+
+    @if (users != null) {
+    <div class="users-container">
+    @foreach(var user in users)
+    {
+        <div class="list-item">
+            <UserCard User=@user/>
+        </div>
     }
-    <AddUserCard/>
-} else {
+    </div>
+    } else {
     <p class="h3">Retrieving data from server...</p>
-}
+    }
+</div>
 
 @code {
-    IEnumerable<User>? users;
-    AuthomeContext ctx;
+    private IEnumerable<User>? users;
+    private AuthomeContext ctx = null!;
+    private HubConnection? hubConnection;
 
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         ctx = new AuthomeContext();
         users = ctx.Users
-            .Include(u => u.FingerImage).ToList();
-        return Task.CompletedTask;
+            .Include(u => u.FingerImage)
+            .OrderBy(u => u.ImageIndex)
+            .ToList();
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hub/users"))
+            .Build();
+
+        hubConnection.On("Update", () => UpdateList());
+
+        await hubConnection.StartAsync();
+    }
+
+    private void UpdateList()
+    {
+        users = ctx.Users
+            .Include(u => u.FingerImage)
+            .OrderBy(u => u.ImageIndex)
+            .ToList();
+            this.StateHasChanged();
+    }
+
+    private void NavigateToNewUserPage()
+    {
+        NavigationManager.NavigateTo("/users/new");
     }
 }

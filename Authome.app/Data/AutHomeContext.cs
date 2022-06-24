@@ -13,8 +13,4 @@ public class AuthomeContext : DbContext
 	{
 		options.UseSqlite($"Data Source=authome.db");
 	}
-
-	protected override void OnModelCreating(ModelBuilder modelBuilder)
-	{
-	}
 }

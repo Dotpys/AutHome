@@ -17,6 +17,7 @@ builder.Services.AddResponseCompression(opts =>
 builder.Services.AddDbContext<AuthomeContext>();
 builder.Services.AddSingleton<FingerprintImageStore>();
 builder.Services.AddHostedService<MQTTConnectionService>();
+builder.Services.AddSingleton<UserFingerprintService>();
 
 
 var app = builder.Build();
@@ -44,7 +45,8 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseRouting();
 
 app.MapBlazorHub();
-app.MapHub<ControlHub>("/controlhub");
+app.MapHub<DashboardHub>("/hub/dashboard");
+app.MapHub<UsersHub>("/hub/users");
 app.MapFallbackToPage("/_Host");
 
 app.Run();

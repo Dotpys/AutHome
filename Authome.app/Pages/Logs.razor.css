@@ -1,0 +1,39 @@
+﻿.logs-container {
+	padding: 1rem;
+}
+
+.log-table {
+	display: block;
+	width: calc(100% - 1rem);
+	margin: 0.5rem;
+	background-color: #191919;
+	border-radius: 0.6rem;
+}
+
+.log-table-header {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 0.6rem;
+	font-size: 1rem;
+	padding: 8px 16px;
+	background-color: #4155c3;
+}
+
+	.log-table-header th {
+		width: 33.33%;
+		padding-left: 10px;
+	}
+
+.log-table-item {
+	display: flex;
+	width: 100%;
+	border-radius: 0.6rem;
+	font-size: 1rem;
+	padding: 8px 16px;
+}
+
+	.log-table-item td {
+		width: 33.33%;
+		padding-left: 10px;
+	}

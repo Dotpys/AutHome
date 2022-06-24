@@ -1,26 +1,34 @@
-.card {
-    border-radius: 15px;
+.card
+{
+    border-radius: 0.6rem;
     background: #232323;
     transition: all 0.1s cubic-bezier(.25,.8,.25,1);
     box-shadow: 0 0 2px rgba(0,0,0,0.125);
     border: none;
-    flex-grow: 1;
-    flex-basis: 20%;
     color: white;
-    width: auto;
-    --accentColor: #4155c3;
+    width: inherit;
 }
 
-.card:hover {
-    box-shadow: 0 0 20px var(--accentColor);
+.card:hover
+{
+    box-shadow: 0 0 20px var(--accent-color);
     border: none;
 }
 
-.card .card-header {
-    box-shadow: 0 0 2px rgba(0,0,0,0.25);
-    border: none;
-    border-radius: 15px;
-    background: var(--accentColor);
-    font-size: 23px;
+.card .card-body
+{
+    padding: 0;
 }
 
+.card .card-header
+{
+    box-shadow: 0 0 0.2rem rgba(0,0,0,0.25);
+    border: none;
+    border-radius: 0.6rem;
+    background: var(--accent-color);
+    font-size: 1.5rem;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    width: inherit;
+}

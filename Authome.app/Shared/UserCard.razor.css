@@ -1,0 +1,28 @@
+﻿.user-info
+{
+	padding: 1rem;
+}
+
+.index-text {
+	font-size: 1rem;
+	margin: 0;
+	padding: 0 0 1rem 0;
+}
+
+.fingerprint-image-container
+{
+	height: 19rem;
+}
+
+.no-fingerprint-text
+{
+	font-size: 1rem;
+	margin: 0;
+	padding-top: 8rem;
+}
+
+.fingerprint-image
+{
+	border-radius: 0.6rem;
+	height: 15rem;
+}
